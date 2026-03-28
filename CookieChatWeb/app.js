@@ -59,6 +59,7 @@ const draftEl = document.querySelector("#draft");
 const emojiBarEl = document.querySelector("#emoji-bar");
 const emojiToggleBtn = document.querySelector("#emoji-toggle");
 const adminPanel = document.querySelector("#admin-panel");
+const adminPanelTitleEl = document.querySelector("#admin-panel h3");
 const joinRequestsEl = document.querySelector("#join-requests");
 
 let currentUserRole = null;
@@ -102,6 +103,14 @@ function inferDisplayName(user) {
   }
 
   return "Usuario";
+}
+
+function initialsFromName(name) {
+  const safe = (name || "").trim();
+  if (!safe) return "U";
+  const parts = safe.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+  return `${parts[0].slice(0, 1)}${parts[1].slice(0, 1)}`.toUpperCase();
 }
 
 function isIOS() {
@@ -240,19 +249,31 @@ function renderMessages(docs) {
   for (const docSnap of docs) {
     const message = docSnap.data();
     const item = document.createElement("li");
-    item.className = "message";
+    const isMine = message.senderId === currentUserId;
+    item.className = `message ${isMine ? "message-own" : "message-other"}`;
 
-    const meta = document.createElement("div");
-    meta.className = "meta";
     const senderName =
       message.senderName ||
       (message.senderId && message.senderId === currentUserId ? currentUserName : "Usuario");
-    meta.textContent = `${roleLabel(message.senderRole)} · ${senderName} · ${formatDate(message.createdAt)}`;
+    const roleText = roleLabel(message.senderRole);
+
+    const header = document.createElement("div");
+    header.className = "message-header";
+
+    const avatar = document.createElement("span");
+    avatar.className = "avatar";
+    avatar.textContent = initialsFromName(senderName);
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = `${senderName} · ${roleText} · ${formatDate(message.createdAt)}`;
 
     const text = document.createElement("p");
     text.textContent = message.text || "";
 
-    item.appendChild(meta);
+    header.appendChild(avatar);
+    header.appendChild(meta);
+    item.appendChild(header);
     item.appendChild(text);
     messagesEl.appendChild(item);
   }
@@ -306,6 +327,7 @@ function watchMessages() {
 function renderJoinRequests(snapshot) {
   joinRequestsEl.innerHTML = "";
   const pendingDocs = snapshot.docs.filter((docSnap) => docSnap.data().status === "pending");
+  adminPanelTitleEl.textContent = `Solicitudes de acceso (${pendingDocs.length})`;
 
   if (!pendingDocs.length) {
     const empty = document.createElement("li");
