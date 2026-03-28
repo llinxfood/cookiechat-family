@@ -17,6 +17,14 @@ service cloud.firestore {
       return isFamilyMember(familyId) && familyDoc(familyId).data.admins[request.auth.uid] == true;
     }
 
+    function familyExists(familyId) {
+      return exists(/databases/$(database)/documents/families/$(familyId));
+    }
+
+    function isValidRequestedRole(role) {
+      return role in ['adult', 'child'];
+    }
+
     match /families/{familyId} {
       allow read: if isFamilyMember(familyId);
       allow create: if false;
@@ -54,26 +62,26 @@ service cloud.firestore {
         // Un usuario autenticado puede crear/actualizar su propia solicitud
         // mientras no sea miembro y con formato controlado.
         allow create: if isSignedIn()
+          && familyExists(familyId)
           && request.auth.uid == requestUserId
-          && !isFamilyMember(familyId)
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.email is string
           && request.resource.data.displayName is string
           && request.resource.data.displayName.size() > 0
           && request.resource.data.displayName.size() <= 40
-          && request.resource.data.requestedRole in ['adult', 'child']
+          && isValidRequestedRole(request.resource.data.requestedRole)
           && request.resource.data.status == 'pending'
-          && request.resource.data.requestedAt is timestamp;
+          && (request.resource.data.requestedAt is timestamp || request.resource.data.requestedAt == request.time);
 
         allow update: if isSignedIn()
           && request.auth.uid == requestUserId
-          && !isFamilyMember(familyId)
+          && familyExists(familyId)
           && request.resource.data.uid == resource.data.uid
-          && request.resource.data.email == resource.data.email
+          && request.resource.data.email is string
           && request.resource.data.displayName is string
           && request.resource.data.displayName.size() > 0
           && request.resource.data.displayName.size() <= 40
-          && request.resource.data.requestedRole in ['adult', 'child']
+          && isValidRequestedRole(request.resource.data.requestedRole)
           && request.resource.data.status == 'pending';
       }
     }
