@@ -24,6 +24,7 @@ It is designed for small trusted groups with an approval-based onboarding flow a
 - `CookieChatWeb/index.html` UI structure
 - `CookieChatWeb/styles.css` design system and layout
 - `CookieChatWeb/app.js` auth/chat/approvals/install/update logic
+- `CookieChatWeb/config/firebase-config.example.js` Firebase client config template
 - `CookieChatWeb/firestore.rules` security rules
 - `CookieChatWeb/firebase.json` Firebase deploy config
 
@@ -35,6 +36,14 @@ It is designed for small trusted groups with an approval-based onboarding flow a
 - Firestore rules enforce all access control server-side
 
 ## Local development
+
+Create your local Firebase config file first:
+
+```bash
+cp CookieChatWeb/config/firebase-config.example.js CookieChatWeb/config/firebase-config.js
+```
+
+Then fill `firebase-config.js` with your Firebase project values.
 
 ```bash
 cd /Users/maria/cookiechat-family/CookieChatWeb
