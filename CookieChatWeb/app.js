@@ -538,10 +538,18 @@ async function handleSend(event) {
   }
 }
 
+function handleDraftKeydown(event) {
+  // En iOS/iPad algunos teclados no disparan el submit del form con Enter.
+  if (event.key !== "Enter" || event.shiftKey) return;
+  event.preventDefault();
+  composer.requestSubmit();
+}
+
 modeLoginBtn.addEventListener("click", () => setAuthMode("login"));
 modeRegisterBtn.addEventListener("click", () => setAuthMode("register"));
 loginForm.addEventListener("submit", handleAuthSubmit);
 composer.addEventListener("submit", handleSend);
+draftEl.addEventListener("keydown", handleDraftKeydown);
 emojiToggleBtn.addEventListener("click", () => {
   emojiBarEl.classList.toggle("hidden");
   draftEl.focus();
