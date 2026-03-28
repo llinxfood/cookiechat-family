@@ -44,6 +44,8 @@ const logoutBtn = document.querySelector("#logout-btn");
 const messagesEl = document.querySelector("#messages");
 const composer = document.querySelector("#composer");
 const draftEl = document.querySelector("#draft");
+const emojiBarEl = document.querySelector("#emoji-bar");
+const emojiToggleBtn = document.querySelector("#emoji-toggle");
 const adminPanel = document.querySelector("#admin-panel");
 const joinRequestsEl = document.querySelector("#join-requests");
 
@@ -52,6 +54,7 @@ let currentUserId = null;
 let authMode = "login";
 let unsubscribeMessages = null;
 let unsubscribeRequests = null;
+const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
@@ -67,8 +70,8 @@ function setView(view) {
 function setAuthMode(mode) {
   authMode = mode;
   const register = mode === "register";
-  document.querySelector("#auth-card h2").textContent = register ? "Registrarse" : "Entrar";
-  authSubmitBtn.textContent = register ? "Enviar solicitud" : "Entrar";
+  document.querySelector("#auth-card h2").textContent = register ? "Nuevo usuario" : "Acceso";
+  authSubmitBtn.textContent = register ? "Enviar solicitud" : "Continuar";
   displayNameLabel.classList.toggle("hidden", !register);
   requestedRoleLabel.classList.toggle("hidden", !register);
   displayNameEl.required = register;
@@ -85,6 +88,30 @@ function formatDate(rawDate) {
     day: "2-digit",
     month: "2-digit"
   }).format(date);
+}
+
+function insertEmojiAtCursor(emoji) {
+  const current = draftEl.value;
+  const start = draftEl.selectionStart ?? current.length;
+  const end = draftEl.selectionEnd ?? current.length;
+  draftEl.value = `${current.slice(0, start)}${emoji}${current.slice(end)}`;
+  const next = start + emoji.length;
+  draftEl.focus();
+  draftEl.setSelectionRange(next, next);
+}
+
+function renderEmojiBar() {
+  emojiBarEl.innerHTML = "";
+  for (const emoji of frequentEmojis) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "emoji-chip";
+    chip.textContent = emoji;
+    chip.addEventListener("click", () => {
+      insertEmojiAtCursor(emoji);
+    });
+    emojiBarEl.appendChild(chip);
+  }
 }
 
 function renderMessages(docs) {
@@ -312,6 +339,10 @@ modeLoginBtn.addEventListener("click", () => setAuthMode("login"));
 modeRegisterBtn.addEventListener("click", () => setAuthMode("register"));
 loginForm.addEventListener("submit", handleAuthSubmit);
 composer.addEventListener("submit", handleSend);
+emojiToggleBtn.addEventListener("click", () => {
+  emojiBarEl.classList.toggle("hidden");
+  draftEl.focus();
+});
 logoutBtn.addEventListener("click", async () => {
   await signOut(auth);
 });
@@ -390,4 +421,5 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+renderEmojiBar();
 setAuthMode("login");

@@ -7,62 +7,87 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="CookieChat" />
-    <title>CookieChat Familia</title>
+    <title>CookieChat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
-    <link rel="apple-touch-icon" href="./icons/icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <div class="bg-orb bg-orb-a"></div>
+    <div class="bg-orb bg-orb-b"></div>
     <main class="app-shell">
-      <header class="app-header">
-        <h1>CookieChat Familia</h1>
-        <p>Chat privado solo para miembros autorizados</p>
+      <header class="topbar">
+        <div class="brand-row">
+          <img class="hero-logo" src="./icons/icon-192.png" alt="CookieChat icono" />
+          <img class="hero-wordmark" src="./icons/logo-wordmark.png" alt="CookieChat" />
+        </div>
+        <span class="privacy-pill">Privado y por invitacion</span>
       </header>
 
       <section id="status" class="status" aria-live="polite"></section>
 
-      <section id="auth-card" class="card">
-        <h2>Entrar</h2>
-        <div class="auth-modes">
-          <button id="mode-login" class="secondary" type="button">Entrar</button>
-          <button id="mode-register" class="secondary" type="button">Registrarse</button>
-        </div>
-        <form id="login-form" class="stack">
-          <label id="display-name-label" class="hidden">
-            Nombre
-            <input id="display-name" type="text" maxlength="40" autocomplete="name" />
-          </label>
-          <label>
-            Email
-            <input id="email" type="email" autocomplete="email" required />
-          </label>
-          <label>
-            Contrasena
-            <input id="password" type="password" autocomplete="current-password" required minlength="8" />
-          </label>
-          <label id="requested-role-label" class="hidden">
-            Tipo de usuario
-            <select id="requested-role">
-              <option value="adult">Adulto</option>
-              <option value="child">Menor</option>
-            </select>
-          </label>
-          <button id="auth-submit" type="submit">Entrar</button>
-        </form>
+      <section class="layout-grid">
+        <section class="hero card">
+          <h1>Un chat familiar, seguro y sencillo.</h1>
+          <p>
+            CookieChat mantiene la conversacion cerrada: solo entran usuarios aprobados por administradores.
+          </p>
+          <ul class="feature-list">
+            <li>Aprobacion manual de nuevos miembros</li>
+            <li>Acceso privado por cuenta autenticada</li>
+            <li>Disponible en movil, tablet y ordenador</li>
+          </ul>
+        </section>
+
+        <section id="auth-card" class="card auth-card">
+          <h2>Acceso</h2>
+          <div class="auth-modes">
+            <button id="mode-login" class="secondary" type="button">Acceso</button>
+            <button id="mode-register" class="secondary" type="button">Nuevo usuario</button>
+          </div>
+          <form id="login-form" class="stack">
+            <label id="display-name-label" class="hidden">
+              Nombre
+              <input id="display-name" type="text" maxlength="40" autocomplete="name" />
+            </label>
+            <label>
+              Email
+              <input id="email" type="email" autocomplete="email" required />
+            </label>
+            <label>
+              Contrasena
+              <input id="password" type="password" autocomplete="current-password" required minlength="8" />
+            </label>
+            <label id="requested-role-label" class="hidden">
+              Tipo de usuario
+              <select id="requested-role">
+                <option value="adult">Adulto</option>
+                <option value="child">Menor</option>
+              </select>
+            </label>
+            <button id="auth-submit" type="submit">Continuar</button>
+          </form>
+        </section>
       </section>
 
       <section id="pending-card" class="card hidden">
         <h2>Solicitud enviada</h2>
         <p id="pending-message">
-          Tu solicitud esta pendiente de aprobacion por un administrador de la familia.
+          Tu solicitud esta pendiente de aprobacion por un administrador.
         </p>
         <button id="pending-logout-btn" class="secondary" type="button">Salir</button>
       </section>
 
       <section id="chat-card" class="card hidden">
         <div class="chat-topbar">
-          <h2>Chat familiar</h2>
+          <h2>Chat</h2>
           <button id="logout-btn" class="secondary" type="button">Salir</button>
         </div>
         <section id="admin-panel" class="admin-panel hidden">
@@ -71,8 +96,14 @@
         </section>
         <ul id="messages" class="messages" aria-live="polite"></ul>
         <form id="composer" class="composer">
-          <input id="draft" type="text" maxlength="1000" placeholder="Escribe un mensaje..." required />
-          <button type="submit">Enviar</button>
+          <div id="emoji-bar" class="emoji-bar hidden" aria-label="Emojis frecuentes"></div>
+          <div class="composer-row">
+            <button id="emoji-toggle" class="emoji-toggle secondary" type="button" aria-label="Mostrar emojis">
+              😊
+            </button>
+            <input id="draft" type="text" maxlength="1000" placeholder="Escribe un mensaje..." required />
+            <button type="submit">Enviar</button>
+          </div>
         </form>
       </section>
     </main>

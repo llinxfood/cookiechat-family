@@ -1,11 +1,16 @@
-const CACHE_NAME = "cookiechat-v2";
+const CACHE_NAME = "cookiechat-v4";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
-  "./config/firebase-config.js"
+  "./config/firebase-config.js",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/apple-touch-icon.png",
+  "./icons/favicon-32.png",
+  "./icons/logo-wordmark.png"
 ];
 
 self.addEventListener("install", (event) => {
