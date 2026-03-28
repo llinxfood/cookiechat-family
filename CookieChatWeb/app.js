@@ -298,8 +298,16 @@ async function loadMembership(user) {
     throw new Error("Esta cuenta no esta aprobada en este grupo.");
   }
 
+  let resolvedName = (storedName && String(storedName).trim()) || "";
+  if (!resolvedName) {
+    const ownRequestRef = doc(db, "families", familyId, "joinRequests", user.uid);
+    const ownRequestSnap = await getDoc(ownRequestRef);
+    const requestName = ownRequestSnap.exists() ? ownRequestSnap.data()?.displayName : "";
+    resolvedName = requestName ? String(requestName).trim() : "";
+  }
+
   currentUserRole = role;
-  currentUserName = (storedName && String(storedName).trim()) || inferDisplayName(user);
+  currentUserName = resolvedName || inferDisplayName(user);
   currentUserIsAdmin = isAdmin || role === "admin";
 }
 
