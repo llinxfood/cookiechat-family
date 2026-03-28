@@ -33,6 +33,7 @@ const installHintEl = document.querySelector("#install-hint");
 const updateCardEl = document.querySelector("#update-card");
 const updateBtnEl = document.querySelector("#update-btn");
 const authCard = document.querySelector("#auth-card");
+const landingLayoutEl = document.querySelector("#landing-layout");
 const pendingCard = document.querySelector("#pending-card");
 const chatCard = document.querySelector("#chat-card");
 const loginForm = document.querySelector("#login-form");
@@ -103,9 +104,17 @@ function setStatus(text, isError = false) {
 }
 
 function setView(view) {
+  landingLayoutEl.classList.toggle("hidden", view !== "auth");
   authCard.classList.toggle("hidden", view !== "auth");
   pendingCard.classList.toggle("hidden", view !== "pending");
   chatCard.classList.toggle("hidden", view !== "chat");
+
+  // La tarjeta de instalacion solo es util en pantalla de acceso.
+  if (view === "auth" && !isStandalone()) {
+    installCardEl.classList.remove("hidden");
+  } else {
+    installCardEl.classList.add("hidden");
+  }
 }
 
 function setAuthMode(mode) {
