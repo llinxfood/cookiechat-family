@@ -1,4 +1,4 @@
-const CACHE_NAME = "cookiechat-v6";
+const CACHE_NAME = "cookiechat-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -35,6 +35,10 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+
+  // Never proxy third-party origins (Firebase/Google APIs included).
+  if (url.origin !== self.location.origin) return;
 
   const acceptsHTML = event.request.headers.get("accept")?.includes("text/html");
 

@@ -61,7 +61,12 @@ let unsubscribeMessages = null;
 let unsubscribeRequests = null;
 let installPromptEvent = null;
 let waitingServiceWorker = null;
+let isSubmittingAuth = false;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -287,6 +292,15 @@ async function createJoinRequest(user, displayName, requestedRole) {
     },
     { merge: true }
   );
+
+  // Confirma que el documento existe para evitar carreras de UI justo tras el alta.
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const check = await getDoc(reqRef);
+    if (check.exists()) return;
+    await sleep(500);
+  }
+
+  throw new Error("join-request-not-visible-yet");
 }
 
 async function reviewJoinRequest(targetUserId, role, action) {
@@ -324,11 +338,16 @@ async function reviewJoinRequest(targetUserId, role, action) {
 
 async function handleAuthSubmit(event) {
   event.preventDefault();
+  if (isSubmittingAuth) return;
+
+  isSubmittingAuth = true;
+  authSubmitBtn.disabled = true;
   const email = document.querySelector("#email").value.trim();
   const password = document.querySelector("#password").value;
 
   try {
     if (authMode === "login") {
+      authSubmitBtn.textContent = "Entrando...";
       setStatus("Entrando...");
       await signInWithEmailAndPassword(auth, email, password);
       return;
@@ -341,12 +360,33 @@ async function handleAuthSubmit(event) {
       return;
     }
 
+    authSubmitBtn.textContent = "Creando...";
     setStatus("Creando cuenta...");
     const credential = await createUserWithEmailAndPassword(auth, email, password);
+    authSubmitBtn.textContent = "Enviando solicitud...";
     await createJoinRequest(credential.user, displayName, requestedRole);
+    pendingMessageEl.textContent = "Tu solicitud esta pendiente de aprobacion por un administrador.";
+    setView("pending");
     setStatus("Solicitud enviada. Esperando aprobacion.");
   } catch (error) {
-    setStatus(`No se pudo continuar: ${error.message}`, true);
+    if (authMode === "register" && auth.currentUser) {
+      await signOut(auth);
+    }
+    if (error?.code === "auth/email-already-in-use") {
+      setStatus("Ese email ya existe. Usa Acceso o prueba otro correo.", true);
+    } else if (error?.code === "auth/invalid-credential") {
+      setStatus("Credenciales no validas. Revisa email/contrasena o usa Nuevo usuario.", true);
+    } else if (error?.code === "permission-denied") {
+      setStatus("Sin permisos para guardar la solicitud. Revisa Firestore Rules y familyId.", true);
+    } else if (error?.message === "join-request-not-visible-yet") {
+      setStatus("La solicitud tarda mas de lo normal. Intenta entrar de nuevo en unos segundos.", true);
+    } else {
+      setStatus(`No se pudo continuar: ${error.message}`, true);
+    }
+  } finally {
+    isSubmittingAuth = false;
+    authSubmitBtn.disabled = false;
+    authSubmitBtn.textContent = authMode === "register" ? "Enviar solicitud" : "Continuar";
   }
 }
 
@@ -445,8 +485,22 @@ onAuthStateChanged(auth, async (user) => {
   try {
     const request = await loadOwnJoinRequest(user.uid);
     if (!request) {
-      await signOut(auth);
-      setStatus("Acceso denegado: no eres miembro y no hay solicitud activa.", true);
+      // Evita carrera justo despues de registro: esperamos y reintentamos varias veces.
+      let retriedRequest = null;
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        await sleep(500);
+        retriedRequest = await loadOwnJoinRequest(user.uid);
+        if (retriedRequest) break;
+      }
+      if (!retriedRequest) {
+        await signOut(auth);
+        setStatus("Acceso denegado: no eres miembro y no hay solicitud activa.", true);
+        return;
+      }
+
+      pendingMessageEl.textContent = "Tu solicitud esta pendiente de aprobacion por un administrador.";
+      setView("pending");
+      setStatus("Esperando aprobacion.");
       return;
     }
 
