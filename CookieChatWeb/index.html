@@ -107,7 +107,13 @@
           </div>
         </div>
         <section id="admin-panel" class="admin-panel hidden">
-          <h3>Solicitudes de acceso</h3>
+          <div class="admin-panel-head">
+            <h3>Solicitudes de acceso</h3>
+            <div class="admin-notify-tools">
+              <span id="pending-badge" class="pending-badge hidden">0 nuevas</span>
+              <button id="notif-enable-btn" class="secondary" type="button">Activar avisos</button>
+            </div>
+          </div>
           <ul id="join-requests" class="requests"></ul>
         </section>
         <ul id="messages" class="messages" aria-live="polite"></ul>

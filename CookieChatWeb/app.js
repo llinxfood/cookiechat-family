@@ -63,6 +63,8 @@ const emojiToggleBtn = document.querySelector("#emoji-toggle");
 const adminPanel = document.querySelector("#admin-panel");
 const adminPanelTitleEl = document.querySelector("#admin-panel h3");
 const joinRequestsEl = document.querySelector("#join-requests");
+const pendingBadgeEl = document.querySelector("#pending-badge");
+const notifEnableBtn = document.querySelector("#notif-enable-btn");
 
 let currentUserRole = null;
 let currentUserId = null;
@@ -79,6 +81,7 @@ let e2eeKey = null;
 let e2eeFingerprint = "";
 let latestMessageDocs = [];
 let missingE2EEKeyNoticeShown = false;
+let lastPendingCount = null;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 const E2EE_PREFIX = "e2ee:v1:";
 const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
@@ -86,6 +89,50 @@ const MAX_STORED_TEXT_LENGTH = 1000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function supportsBrowserNotifications() {
+  return typeof window !== "undefined" && "Notification" in window;
+}
+
+function updateNotificationButtonLabel() {
+  if (!notifEnableBtn) return;
+  if (!supportsBrowserNotifications()) {
+    notifEnableBtn.disabled = true;
+    notifEnableBtn.textContent = "Avisos no compatibles";
+    return;
+  }
+  notifEnableBtn.disabled = false;
+  notifEnableBtn.textContent =
+    Notification.permission === "granted" ? "Avisos activados" : "Activar avisos";
+}
+
+function updatePendingBadge(count) {
+  if (!pendingBadgeEl) return;
+  if (count <= 0) {
+    pendingBadgeEl.classList.add("hidden");
+    pendingBadgeEl.textContent = "0 nuevas";
+    return;
+  }
+  pendingBadgeEl.classList.remove("hidden");
+  pendingBadgeEl.textContent = `${count} pendiente${count === 1 ? "" : "s"}`;
+}
+
+function notifyNewJoinRequests(newCount, pendingDocs) {
+  if (newCount <= 0) return;
+  const latest = pendingDocs[0]?.data();
+  const who = latest?.displayName || latest?.email || "Nuevo usuario";
+  setStatus(`Nueva solicitud de acceso: ${who}.`);
+
+  if (supportsBrowserNotifications() && Notification.permission === "granted") {
+    const plural = newCount === 1 ? "nueva solicitud" : `${newCount} nuevas solicitudes`;
+    const body = `${plural}. Abre CookieChat para aprobar o rechazar.`;
+    new Notification("CookieChat", { body });
+  }
+
+  if (navigator.vibrate) {
+    navigator.vibrate(80);
+  }
 }
 
 function uint8ToBase64(input) {
@@ -488,7 +535,14 @@ function watchMessages() {
 function renderJoinRequests(snapshot) {
   joinRequestsEl.innerHTML = "";
   const pendingDocs = snapshot.docs.filter((docSnap) => docSnap.data().status === "pending");
-  adminPanelTitleEl.textContent = `Solicitudes de acceso (${pendingDocs.length})`;
+  const pendingCount = pendingDocs.length;
+  adminPanelTitleEl.textContent = `Solicitudes de acceso (${pendingCount})`;
+  updatePendingBadge(pendingCount);
+
+  if (lastPendingCount !== null && pendingCount > lastPendingCount) {
+    notifyNewJoinRequests(pendingCount - lastPendingCount, pendingDocs);
+  }
+  lastPendingCount = pendingCount;
 
   if (!pendingDocs.length) {
     const empty = document.createElement("li");
@@ -776,6 +830,29 @@ verifyEmailBtn.addEventListener("click", async () => {
     setStatus(`No se pudo reenviar el email: ${error.message}`, true);
   }
 });
+notifEnableBtn.addEventListener("click", async () => {
+  if (!supportsBrowserNotifications()) {
+    setStatus("Este navegador no soporta notificaciones.", true);
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    setStatus("Avisos ya activados.");
+    return;
+  }
+
+  try {
+    const result = await Notification.requestPermission();
+    updateNotificationButtonLabel();
+    if (result === "granted") {
+      setStatus("Avisos activados en este navegador.");
+    } else {
+      setStatus("Permiso de avisos no concedido.", true);
+    }
+  } catch (error) {
+    setStatus(`No se pudieron activar avisos: ${error.message}`, true);
+  }
+});
 
 onAuthStateChanged(auth, async (user) => {
   if (unsubscribeMessages) {
@@ -796,6 +873,7 @@ onAuthStateChanged(auth, async (user) => {
     e2eeFingerprint = "";
     latestMessageDocs = [];
     missingE2EEKeyNoticeShown = false;
+    lastPendingCount = null;
     refreshE2EEIndicator();
     adminPanel.classList.add("hidden");
     setView("auth");
@@ -945,3 +1023,4 @@ renderEmojiBar();
 setupInstallUI();
 setAuthMode("login");
 refreshE2EEIndicator();
+updateNotificationButtonLabel();

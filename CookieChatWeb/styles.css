@@ -376,8 +376,34 @@ button.secondary {
 }
 
 .admin-panel h3 {
-  margin: 2px 0 10px;
+  margin: 0;
   font-size: 1rem;
+}
+
+.admin-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 0 10px;
+  flex-wrap: wrap;
+}
+
+.admin-notify-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pending-badge {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #1f487f;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(31, 111, 235, 0.13);
+  border: 1px solid rgba(31, 111, 235, 0.24);
 }
 
 .requests {
