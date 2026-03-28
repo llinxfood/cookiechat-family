@@ -271,12 +271,14 @@ async function loadMembership(user) {
   const family = familySnap.data();
   const role = family?.members?.[user.uid];
   const isAdmin = family?.admins?.[user.uid] === true;
+  const storedName = family?.memberNames?.[user.uid];
 
   if (!role) {
     throw new Error("Esta cuenta no esta aprobada en este grupo.");
   }
 
   currentUserRole = role;
+  currentUserName = (storedName && String(storedName).trim()) || inferDisplayName(user);
   currentUserIsAdmin = isAdmin || role === "admin";
 }
 
@@ -316,6 +318,7 @@ function renderJoinRequests(snapshot) {
     const request = docSnap.data();
     const li = document.createElement("li");
     const requestedRole = request.requestedRole || "adult";
+    const requestedName = request.displayName || "Sin nombre";
     const displayName = request.displayName || "Sin nombre";
     const email = request.email || "sin-email";
 
@@ -330,7 +333,7 @@ function renderJoinRequests(snapshot) {
     approveBtn.type = "button";
     approveBtn.textContent = "Aprobar";
     approveBtn.addEventListener("click", async () => {
-      await reviewJoinRequest(docSnap.id, requestedRole, "approved");
+      await reviewJoinRequest(docSnap.id, requestedRole, "approved", requestedName);
     });
 
     const rejectBtn = document.createElement("button");
@@ -387,7 +390,7 @@ async function createJoinRequest(user, displayName, requestedRole) {
   throw new Error("join-request-not-visible-yet");
 }
 
-async function reviewJoinRequest(targetUserId, role, action) {
+async function reviewJoinRequest(targetUserId, role, action, displayName = "Usuario") {
   if (!auth.currentUser || !currentUserId || !currentUserIsAdmin) return;
   const familyRef = doc(db, "families", familyId);
   const requestRef = doc(db, "families", familyId, "joinRequests", targetUserId);
@@ -399,6 +402,9 @@ async function reviewJoinRequest(targetUserId, role, action) {
       {
         members: {
           [targetUserId]: role
+        },
+        memberNames: {
+          [targetUserId]: String(displayName).trim() || "Usuario"
         }
       },
       { merge: true }
