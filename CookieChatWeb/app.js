@@ -230,7 +230,7 @@ async function loadMembership(user) {
   const familySnap = await getDoc(familyRef);
 
   if (!familySnap.exists()) {
-    throw new Error("Configured group was not found.");
+    throw new Error("No se encontro el grupo configurado.");
   }
 
   const family = familySnap.data();
@@ -238,7 +238,7 @@ async function loadMembership(user) {
   const isAdmin = family?.admins?.[user.uid] === true;
 
   if (!role) {
-    throw new Error("This account is not approved in this group.");
+    throw new Error("Esta cuenta no esta aprobada en este grupo.");
   }
 
   currentUserRole = role;
@@ -536,7 +536,7 @@ onAuthStateChanged(auth, async (user) => {
   currentUserId = user.uid;
 
   try {
-    setStatus("Validating access...");
+    setStatus("Validando acceso...");
     await loadMembership(user);
     if (!user.emailVerified) {
       verifyEmailBtn.classList.remove("hidden");
@@ -550,7 +550,7 @@ onAuthStateChanged(auth, async (user) => {
 
     verifyEmailBtn.classList.add("hidden");
     setView("chat");
-    setStatus("Connected.");
+    setStatus("Conectada.");
     watchMessages();
 
     if (currentUserIsAdmin) {
@@ -587,7 +587,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     if (request.status === "rejected") {
-      pendingMessageEl.textContent = "Your request was rejected. Contact an admin.";
+      pendingMessageEl.textContent = "Tu solicitud fue rechazada. Contacta con una administradora.";
       verifyEmailBtn.classList.add("hidden");
     } else if (request.status === "approved") {
       pendingMessageEl.textContent = user.emailVerified
@@ -598,7 +598,7 @@ onAuthStateChanged(auth, async (user) => {
         await sendEmailVerification(user).catch(() => {});
       }
     } else {
-      pendingMessageEl.textContent = "Your request is pending admin approval.";
+      pendingMessageEl.textContent = "Tu solicitud esta pendiente de aprobacion por una administradora.";
       verifyEmailBtn.classList.remove("hidden");
     }
 
