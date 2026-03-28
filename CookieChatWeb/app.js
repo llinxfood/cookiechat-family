@@ -27,6 +27,11 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const statusEl = document.querySelector("#status");
+const installCardEl = document.querySelector("#install-card");
+const installBtnEl = document.querySelector("#install-btn");
+const installHintEl = document.querySelector("#install-hint");
+const updateCardEl = document.querySelector("#update-card");
+const updateBtnEl = document.querySelector("#update-btn");
 const authCard = document.querySelector("#auth-card");
 const pendingCard = document.querySelector("#pending-card");
 const chatCard = document.querySelector("#chat-card");
@@ -54,7 +59,38 @@ let currentUserId = null;
 let authMode = "login";
 let unsubscribeMessages = null;
 let unsubscribeRequests = null;
+let installPromptEvent = null;
+let waitingServiceWorker = null;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function setupInstallUI() {
+  if (isStandalone()) {
+    installCardEl.classList.add("hidden");
+    return;
+  }
+
+  if (isIOS()) {
+    installCardEl.classList.remove("hidden");
+    installBtnEl.classList.add("hidden");
+    installHintEl.textContent = "iPhone/iPad: Safari > Compartir > Añadir a pantalla de inicio.";
+    return;
+  }
+
+  installHintEl.textContent = "Instala CookieChat para abrirla como app.";
+}
+
+function showUpdateBanner(worker) {
+  waitingServiceWorker = worker;
+  updateCardEl.classList.remove("hidden");
+}
 
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
@@ -343,6 +379,23 @@ emojiToggleBtn.addEventListener("click", () => {
   emojiBarEl.classList.toggle("hidden");
   draftEl.focus();
 });
+installBtnEl.addEventListener("click", async () => {
+  if (!installPromptEvent) return;
+  installPromptEvent.prompt();
+  try {
+    await installPromptEvent.userChoice;
+  } finally {
+    installPromptEvent = null;
+    installBtnEl.classList.add("hidden");
+  }
+});
+updateBtnEl.addEventListener("click", () => {
+  if (!waitingServiceWorker) {
+    window.location.reload();
+    return;
+  }
+  waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+});
 logoutBtn.addEventListener("click", async () => {
   await signOut(auth);
 });
@@ -415,11 +468,48 @@ onAuthStateChanged(auth, async (user) => {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {
-      // No bloqueamos por fallo de SW.
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then((registration) => {
+        if (registration.waiting) {
+          showUpdateBanner(registration.waiting);
+        }
+
+        registration.addEventListener("updatefound", () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              showUpdateBanner(newWorker);
+            }
+          });
+        });
+
+        // Busca nueva version de forma periodica para que usuarios vean cambios antes.
+        setInterval(() => {
+          registration.update().catch(() => {});
+        }, 60000);
+      })
+      .catch(() => {
+        // No bloqueamos por fallo de SW.
+      });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
     });
   });
 }
 
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPromptEvent = event;
+  installCardEl.classList.remove("hidden");
+  installBtnEl.classList.remove("hidden");
+});
+
 renderEmojiBar();
+setupInstallUI();
 setAuthMode("login");

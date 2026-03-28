@@ -1,29 +1,29 @@
-# CookieChatWeb (PWA privada familiar)
+# CookieChatWeb (Private Family PWA)
 
-Esta version funciona en iPad, Mac, Android y PC sin publicar app en App Store.
+This version runs on iPad, Mac, Android, and PC without publishing to the App Store.
 
-## 1) Crear proyecto Firebase (gratis)
+## 1) Create a Firebase project
 
-1. Crea un proyecto en Firebase.
-2. Activa `Authentication > Sign-in method > Email/Password`.
-3. Activa `Firestore Database` (modo produccion).
-4. Crea una app web y copia su configuracion.
+1. Create a Firebase project.
+2. Enable `Authentication > Sign-in method > Email/Password`.
+3. Enable `Firestore Database` (production mode).
+4. Create a Web app and copy its configuration.
 
-## 2) Configurar la app web
+## 2) Configure the web app
 
-1. Edita `CookieChatWeb/config/firebase-config.example.js` con tus datos reales.
-2. Ajusta `familyId` si quieres otro id de familia.
+1. Edit `CookieChatWeb/config/firebase-config.example.js` with real values.
+2. Adjust `familyId` if needed.
 
-## 3) Crear usuarios de la familia
+## 3) Create family users
 
-1. En `Authentication > Users`, crea cuenta para madre, padre, hija y abuelos.
-2. Copia el `uid` de cada usuario.
+1. In `Authentication > Users`, create accounts for parents, child, grandparents.
+2. Copy each user's `uid`.
 
-Alternativa: en la app web, los usuarios pueden usar `Registrarse` y quedaran en estado `pending` hasta que un admin los apruebe.
+Alternative: users can register from the app (`New user`) and stay in `pending` status until an admin approves.
 
-## 4) Cargar documento de familia
+## 4) Create family document
 
-Crea en Firestore el documento `families/family_demo_1` con esta estructura:
+Create `families/family_demo_1` in Firestore with this structure:
 
 ```json
 {
@@ -43,38 +43,38 @@ Crea en Firestore el documento `families/family_demo_1` con esta estructura:
 }
 ```
 
-Crea tambien `families/family_demo_1/rooms/family_main` con:
+Create `families/family_demo_1/rooms/family_main`:
 
 ```json
 {
-  "title": "Chat familiar",
+  "title": "Family chat",
   "createdAt": "<timestamp>"
 }
 ```
 
-## 5) Desplegar reglas de seguridad
+## 5) Deploy security rules
 
-Desde la raiz del repo:
+From repo root:
 
 ```bash
 firebase deploy --only firestore:rules --config CookieChatWeb/firebase.json
 ```
 
-## 6) Desplegar hosting (web privada)
+## 6) Deploy hosting
 
 ```bash
 firebase deploy --only hosting --config CookieChatWeb/firebase.json
 ```
 
-## 7) Instalar en iPad/Mac como app
+## 7) Install as an app
 
-1. Abre la URL de Firebase Hosting en Safari.
-2. iPad: Compartir > "Anadir a pantalla de inicio".
-3. Mac (Safari): Archivo > "Anadir al Dock".
+1. Open the Hosting URL in Safari/Chrome.
+2. iPad/iPhone: Share > `Add to Home Screen`.
+3. Mac (Safari): File > `Add to Dock`.
 
-## Seguridad
+## Security
 
-- Solo usuarios autenticados y presentes en `members` pueden entrar.
-- Nadie externo puede leer o escribir mensajes aunque tenga la URL.
-- El control real de seguridad esta en `CookieChatWeb/firestore.rules`.
-- Flujo alta con aprobacion: las solicitudes viven en `families/{familyId}/joinRequests/{uid}` y solo admin puede aprobar/rechazar.
+- Only authenticated users listed in `members` can enter.
+- External users cannot read/write messages even if they know the URL.
+- Security is enforced by `CookieChatWeb/firestore.rules`.
+- Signup approval flow uses `families/{familyId}/joinRequests/{uid}` and only admins can approve/reject.

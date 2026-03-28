@@ -75,16 +75,9 @@ body {
   gap: 10px;
 }
 
-.hero-logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  box-shadow: 0 8px 16px rgba(19, 77, 168, 0.18);
-}
-
 .hero-wordmark {
-  width: min(70vw, 300px);
-  max-width: 300px;
+  width: min(76vw, 520px);
+  max-width: 520px;
   height: auto;
 }
 
@@ -108,6 +101,42 @@ body {
 
 .status.error {
   color: var(--danger);
+}
+
+.install-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.install-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.update-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -4px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(31, 111, 235, 0.28);
+  border-radius: 14px;
+  background: rgba(232, 244, 255, 0.92);
+}
+
+.update-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #1f487f;
+  font-weight: 700;
 }
 
 .layout-grid {
@@ -399,13 +428,18 @@ button.secondary {
     flex-direction: column;
   }
 
-  .hero-logo {
-    width: 48px;
-    height: 48px;
+  .hero-wordmark {
+    width: min(84vw, 420px);
   }
 
-  .hero-wordmark {
-    width: min(78vw, 250px);
+  .install-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .update-card {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .composer-row {

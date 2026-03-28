@@ -25,13 +25,20 @@
     <main class="app-shell">
       <header class="topbar">
         <div class="brand-row">
-          <img class="hero-logo" src="./icons/icon-192.png" alt="CookieChat icono" />
           <img class="hero-wordmark" src="./icons/logo-wordmark.png" alt="CookieChat" />
         </div>
         <span class="privacy-pill">Privado y por invitacion</span>
       </header>
 
       <section id="status" class="status" aria-live="polite"></section>
+      <section id="install-card" class="install-card hidden" aria-live="polite">
+        <button id="install-btn" class="secondary" type="button">Instalar app</button>
+        <p id="install-hint" class="install-hint"></p>
+      </section>
+      <section id="update-card" class="update-card hidden" aria-live="polite">
+        <p class="update-text">Hay una nueva version disponible.</p>
+        <button id="update-btn" type="button">Actualizar ahora</button>
+      </section>
 
       <section class="layout-grid">
         <section class="hero card">
