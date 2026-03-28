@@ -1,4 +1,4 @@
-const CACHE_NAME = "cookiechat-v9";
+const CACHE_NAME = "cookiechat-v10";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,7 +10,7 @@ const ASSETS = [
   "./icons/icon-512-v3.png",
   "./icons/apple-touch-icon-v3.png",
   "./icons/favicon-32-v3.png",
-  "./icons/logo-wordmark-v3.png"
+  "./icons/logo-wordmark-v4.png"
 ];
 
 self.addEventListener("install", (event) => {
