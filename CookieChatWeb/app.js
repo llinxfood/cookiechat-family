@@ -53,6 +53,8 @@ const pendingMessageEl = document.querySelector("#pending-message");
 const verifyEmailBtn = document.querySelector("#verify-email-btn");
 const pendingLogoutBtn = document.querySelector("#pending-logout-btn");
 const logoutBtn = document.querySelector("#logout-btn");
+const e2eeKeyBtn = document.querySelector("#e2ee-key-btn");
+const e2eeIndicatorEl = document.querySelector("#e2ee-indicator");
 const messagesEl = document.querySelector("#messages");
 const composer = document.querySelector("#composer");
 const draftEl = document.querySelector("#draft");
@@ -73,10 +75,143 @@ let installPromptEvent = null;
 let waitingServiceWorker = null;
 let isSubmittingAuth = false;
 let canShowInstallCard = false;
+let e2eeKey = null;
+let e2eeFingerprint = "";
+let latestMessageDocs = [];
+let missingE2EEKeyNoticeShown = false;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
+const E2EE_PREFIX = "e2ee:v1:";
+const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
+const MAX_STORED_TEXT_LENGTH = 1000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function uint8ToBase64(input) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < input.length; i += chunkSize) {
+    binary += String.fromCharCode(...input.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function base64ToUint8(base64) {
+  const binary = atob(base64);
+  const output = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    output[i] = binary.charCodeAt(i);
+  }
+  return output;
+}
+
+function uint8ToHex(input) {
+  return Array.from(input)
+    .map((n) => n.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function deriveE2EE(passphrase) {
+  if (!window.crypto?.subtle) {
+    throw new Error("Este navegador no soporta cifrado Web Crypto.");
+  }
+
+  const encoder = new TextEncoder();
+  const passphraseBytes = encoder.encode(passphrase);
+  const baseKey = await crypto.subtle.importKey("raw", passphraseBytes, "PBKDF2", false, ["deriveKey", "deriveBits"]);
+  const salt = encoder.encode(`${E2EE_SALT_PREFIX}:${familyId}:${roomId}`);
+
+  const key = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt,
+      iterations: 210000,
+      hash: "SHA-256"
+    },
+    baseKey,
+    {
+      name: "AES-GCM",
+      length: 256
+    },
+    false,
+    ["encrypt", "decrypt"]
+  );
+
+  const fingerprintBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt,
+      iterations: 210000,
+      hash: "SHA-256"
+    },
+    baseKey,
+    64
+  );
+  const fingerprint = uint8ToHex(new Uint8Array(fingerprintBits)).slice(0, 8).toUpperCase();
+
+  return { key, fingerprint };
+}
+
+function isEncryptedPayload(value) {
+  return typeof value === "string" && value.startsWith(E2EE_PREFIX);
+}
+
+async function encryptText(plainText) {
+  if (!e2eeKey) return plainText;
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encryptedBuffer = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, e2eeKey, encoder.encode(plainText));
+  const encrypted = new Uint8Array(encryptedBuffer);
+  return `${E2EE_PREFIX}${uint8ToBase64(iv)}.${uint8ToBase64(encrypted)}`;
+}
+
+async function decryptText(payload) {
+  if (!isEncryptedPayload(payload)) return payload;
+  if (!e2eeKey) throw new Error("missing-key");
+
+  const encoded = payload.slice(E2EE_PREFIX.length);
+  const dotIndex = encoded.indexOf(".");
+  if (dotIndex < 1) throw new Error("invalid-payload");
+  const iv = base64ToUint8(encoded.slice(0, dotIndex));
+  const encrypted = base64ToUint8(encoded.slice(dotIndex + 1));
+  const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, e2eeKey, encrypted);
+  return new TextDecoder().decode(decryptedBuffer);
+}
+
+function refreshE2EEIndicator() {
+  if (!e2eeIndicatorEl) return;
+  e2eeIndicatorEl.textContent = e2eeKey ? `E2EE activa · ${e2eeFingerprint}` : "E2EE desactivado";
+}
+
+async function promptAndSetE2EEKey() {
+  const typed = window.prompt(
+    "Introduce la clave familiar E2EE. Debe ser la misma para toda la familia.",
+    ""
+  );
+
+  if (typed === null) return false;
+  const passphrase = typed.trim();
+  if (!passphrase || passphrase.length < 8) {
+    setStatus("La clave E2EE debe tener al menos 8 caracteres.", true);
+    return false;
+  }
+
+  try {
+    const { key, fingerprint } = await deriveE2EE(passphrase);
+    e2eeKey = key;
+    e2eeFingerprint = fingerprint;
+    missingE2EEKeyNoticeShown = false;
+    refreshE2EEIndicator();
+    setStatus(`Clave E2EE configurada (${fingerprint}).`);
+    if (latestMessageDocs.length) {
+      await renderMessages(latestMessageDocs);
+    }
+    return true;
+  } catch (error) {
+    setStatus(`No se pudo configurar E2EE: ${error.message}`, true);
+    return false;
+  }
 }
 
 function roleLabel(role) {
@@ -243,8 +378,10 @@ function renderEmojiBar() {
   }
 }
 
-function renderMessages(docs) {
+async function renderMessages(docs) {
+  latestMessageDocs = docs;
   messagesEl.innerHTML = "";
+  let hasEncryptedMessages = false;
 
   for (const docSnap of docs) {
     const message = docSnap.data();
@@ -269,7 +406,18 @@ function renderMessages(docs) {
     meta.textContent = `${senderName} · ${roleText} · ${formatDate(message.createdAt)}`;
 
     const text = document.createElement("p");
-    text.textContent = message.text || "";
+    const rawText = typeof message.text === "string" ? message.text : "";
+    if (isEncryptedPayload(rawText)) {
+      hasEncryptedMessages = true;
+    }
+
+    try {
+      text.textContent = await decryptText(rawText);
+    } catch {
+      text.textContent = isEncryptedPayload(rawText)
+        ? "Mensaje cifrado. Configura o revisa la clave E2EE."
+        : rawText;
+    }
 
     header.appendChild(avatar);
     header.appendChild(meta);
@@ -279,6 +427,11 @@ function renderMessages(docs) {
   }
 
   messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  if (hasEncryptedMessages && !e2eeKey && !missingE2EEKeyNoticeShown) {
+    missingE2EEKeyNoticeShown = true;
+    setStatus("Hay mensajes cifrados. Pulsa 'Clave E2EE' para leerlos.");
+  }
 }
 
 async function loadMembership(user) {
@@ -324,7 +477,7 @@ function watchMessages() {
   unsubscribeMessages = onSnapshot(
     q,
     (snapshot) => {
-      renderMessages(snapshot.docs);
+      void renderMessages(snapshot.docs);
     },
     (error) => {
       setStatus(`Error cargando mensajes: ${error.message}`, true);
@@ -523,12 +676,18 @@ async function handleSend(event) {
   if (!text || !auth.currentUser || !currentUserRole) return;
 
   try {
+    const storedText = await encryptText(text);
+    if (storedText.length > MAX_STORED_TEXT_LENGTH) {
+      setStatus("Mensaje demasiado largo para enviarlo cifrado. Acortalo un poco.", true);
+      return;
+    }
+
     const messagesRef = collection(db, "families", familyId, "rooms", roomId, "messages");
     await addDoc(messagesRef, {
       senderId: auth.currentUser.uid,
       senderName: currentUserName,
       senderRole: currentUserRole,
-      text,
+      text: storedText,
       type: "text",
       createdAt: serverTimestamp()
     });
@@ -586,6 +745,19 @@ updateBtnEl.addEventListener("click", () => {
 logoutBtn.addEventListener("click", async () => {
   await signOut(auth);
 });
+e2eeKeyBtn.addEventListener("click", async () => {
+  if (!e2eeKey) {
+    await promptAndSetE2EEKey();
+    return;
+  }
+
+  const shouldChange = window.confirm("Ya hay una clave E2EE activa. Quieres cambiarla?");
+  if (!shouldChange) return;
+  e2eeKey = null;
+  e2eeFingerprint = "";
+  refreshE2EEIndicator();
+  await promptAndSetE2EEKey();
+});
 pendingLogoutBtn.addEventListener("click", async () => {
   await signOut(auth);
 });
@@ -620,6 +792,11 @@ onAuthStateChanged(auth, async (user) => {
     currentUserId = null;
     currentUserName = "Usuario";
     currentUserIsAdmin = false;
+    e2eeKey = null;
+    e2eeFingerprint = "";
+    latestMessageDocs = [];
+    missingE2EEKeyNoticeShown = false;
+    refreshE2EEIndicator();
     adminPanel.classList.add("hidden");
     setView("auth");
     setStatus("");
@@ -767,3 +944,4 @@ window.addEventListener("appinstalled", () => {
 renderEmojiBar();
 setupInstallUI();
 setAuthMode("login");
+refreshE2EEIndicator();

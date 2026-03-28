@@ -100,7 +100,11 @@
       <section id="chat-card" class="card hidden">
         <div class="chat-topbar">
           <h2>Chat</h2>
-          <button id="logout-btn" class="secondary" type="button">Salir</button>
+          <div class="chat-actions">
+            <span id="e2ee-indicator" class="e2ee-indicator">E2EE desactivado</span>
+            <button id="e2ee-key-btn" class="secondary" type="button">Clave E2EE</button>
+            <button id="logout-btn" class="secondary" type="button">Salir</button>
+          </div>
         </div>
         <section id="admin-panel" class="admin-panel hidden">
           <h3>Solicitudes de acceso</h3>
