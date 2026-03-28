@@ -511,13 +511,25 @@ emojiToggleBtn.addEventListener("click", () => {
   draftEl.focus();
 });
 installBtnEl.addEventListener("click", async () => {
-  if (!installPromptEvent) return;
+  if (!installPromptEvent) {
+    if (isIOS()) {
+      setStatus("En iPhone/iPad: Safari > Compartir > Anadir a pantalla de inicio.");
+    } else {
+      setStatus("Instalacion no disponible ahora mismo en este navegador.", true);
+    }
+    return;
+  }
   installPromptEvent.prompt();
   try {
-    await installPromptEvent.userChoice;
+    const choice = await installPromptEvent.userChoice;
+    if (choice?.outcome === "accepted") {
+      setStatus("CookieChat instalada.");
+    }
   } finally {
     installPromptEvent = null;
+    canShowInstallCard = false;
     installBtnEl.classList.add("hidden");
+    installCardEl.classList.add("hidden");
   }
 });
 updateBtnEl.addEventListener("click", () => {
@@ -699,6 +711,13 @@ window.addEventListener("beforeinstallprompt", (event) => {
   if (!isStandalone() && !auth.currentUser) {
     installCardEl.classList.remove("hidden");
   }
+});
+
+window.addEventListener("appinstalled", () => {
+  canShowInstallCard = false;
+  installPromptEvent = null;
+  installCardEl.classList.add("hidden");
+  setStatus("CookieChat instalada.");
 });
 
 renderEmojiBar();
