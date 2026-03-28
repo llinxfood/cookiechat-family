@@ -57,6 +57,7 @@ const joinRequestsEl = document.querySelector("#join-requests");
 
 let currentUserRole = null;
 let currentUserId = null;
+let currentUserIsAdmin = false;
 let authMode = "login";
 let unsubscribeMessages = null;
 let unsubscribeRequests = null;
@@ -197,12 +198,14 @@ async function loadMembership(user) {
 
   const family = familySnap.data();
   const role = family?.members?.[user.uid];
+  const isAdmin = family?.admins?.[user.uid] === true;
 
   if (!role) {
     throw new Error("This account is not approved in this group.");
   }
 
   currentUserRole = role;
+  currentUserIsAdmin = isAdmin || role === "admin";
 }
 
 async function loadOwnJoinRequest(userId) {
@@ -313,7 +316,7 @@ async function createJoinRequest(user, displayName, requestedRole) {
 }
 
 async function reviewJoinRequest(targetUserId, role, action) {
-  if (!auth.currentUser || !currentUserId) return;
+  if (!auth.currentUser || !currentUserId || !currentUserIsAdmin) return;
   const familyRef = doc(db, "families", familyId);
   const requestRef = doc(db, "families", familyId, "joinRequests", targetUserId);
   const batch = writeBatch(db);
@@ -465,6 +468,7 @@ onAuthStateChanged(auth, async (user) => {
   if (!user) {
     currentUserRole = null;
     currentUserId = null;
+    currentUserIsAdmin = false;
     adminPanel.classList.add("hidden");
     setView("auth");
     setStatus("");
@@ -480,7 +484,7 @@ onAuthStateChanged(auth, async (user) => {
     setStatus("Connected.");
     watchMessages();
 
-    if (currentUserRole === "admin") {
+    if (currentUserIsAdmin) {
       adminPanel.classList.remove("hidden");
       watchJoinRequests();
     } else {
