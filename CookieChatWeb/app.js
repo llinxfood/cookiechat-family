@@ -389,7 +389,10 @@ async function handleAuthSubmit(event) {
     } else if (error?.code === "auth/invalid-credential") {
       setStatus("Credenciales no validas. Revisa email/contrasena o usa Nuevo usuario.", true);
     } else if (error?.code === "permission-denied") {
-      setStatus("Sin permisos para guardar la solicitud. Revisa Firestore Rules y familyId.", true);
+      setStatus(
+        `Sin permisos para guardar la solicitud en families/${familyId}/joinRequests. Revisa Firestore Rules, familyId y despliegue de reglas.`,
+        true
+      );
     } else if (error?.message === "join-request-not-visible-yet") {
       setStatus("La solicitud tarda mas de lo normal. Intenta entrar de nuevo en unos segundos.", true);
     } else {
