@@ -65,6 +65,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 10px;
 }
@@ -72,13 +73,16 @@ body {
 .brand-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  min-width: 0;
+  flex: 1 1 320px;
 }
 
 .hero-wordmark {
-  width: min(76vw, 520px);
-  max-width: 520px;
+  display: block;
+  width: 100%;
+  max-width: 490px;
   height: auto;
+  object-fit: contain;
 }
 
 .privacy-pill {
@@ -89,6 +93,7 @@ body {
   border-radius: 999px;
   border: 1px solid rgba(35, 88, 166, 0.25);
   background: rgba(255, 255, 255, 0.72);
+  flex: 0 0 auto;
 }
 
 .status {
@@ -509,6 +514,14 @@ button.secondary {
   .hero {
     gap: 10px;
   }
+
+  .hero-wordmark {
+    max-width: min(92vw, 430px);
+  }
+
+  .privacy-pill {
+    margin-top: 2px;
+  }
 }
 
 @media (max-width: 680px) {
@@ -522,7 +535,8 @@ button.secondary {
   }
 
   .hero-wordmark {
-    width: min(84vw, 420px);
+    width: 100%;
+    max-width: min(90vw, 420px);
   }
 
   .install-card {
