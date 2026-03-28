@@ -105,7 +105,8 @@ body {
 
 .install-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 10px;
   margin: 6px 0 12px;
   padding: 10px 12px;
@@ -114,10 +115,52 @@ body {
   background: rgba(255, 255, 255, 0.75);
 }
 
+.install-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.install-title {
+  margin: 0;
+  font-weight: 800;
+  color: #1f487f;
+}
+
 .install-hint {
   margin: 0;
   font-size: 0.9rem;
   color: var(--muted);
+}
+
+.install-steps {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.install-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #274873;
+  font-weight: 700;
+}
+
+.install-step-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: rgba(31, 111, 235, 0.15);
+  color: #1f5fbe;
+  border: 1px solid rgba(31, 111, 235, 0.25);
 }
 
 .update-card {
@@ -435,6 +478,10 @@ button.secondary {
   .install-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .install-card button {
+    width: 100%;
   }
 
   .update-card {

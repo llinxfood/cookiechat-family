@@ -28,8 +28,10 @@ const db = getFirestore(app);
 
 const statusEl = document.querySelector("#status");
 const installCardEl = document.querySelector("#install-card");
+const installTitleEl = document.querySelector("#install-title");
 const installBtnEl = document.querySelector("#install-btn");
 const installHintEl = document.querySelector("#install-hint");
+const installStepsEl = document.querySelector("#install-steps");
 const updateCardEl = document.querySelector("#update-card");
 const updateBtnEl = document.querySelector("#update-btn");
 const authCard = document.querySelector("#auth-card");
@@ -78,6 +80,25 @@ function isStandalone() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
+function renderInstallSteps(steps) {
+  installStepsEl.innerHTML = "";
+  for (let i = 0; i < steps.length; i += 1) {
+    const li = document.createElement("li");
+    li.className = "install-step";
+
+    const badge = document.createElement("span");
+    badge.className = "install-step-badge";
+    badge.textContent = String(i + 1);
+
+    const text = document.createElement("span");
+    text.textContent = steps[i];
+
+    li.appendChild(badge);
+    li.appendChild(text);
+    installStepsEl.appendChild(li);
+  }
+}
+
 function setupInstallUI() {
   if (isStandalone()) {
     installCardEl.classList.add("hidden");
@@ -87,11 +108,19 @@ function setupInstallUI() {
   if (isIOS()) {
     installCardEl.classList.remove("hidden");
     installBtnEl.classList.add("hidden");
-    installHintEl.textContent = "On iPhone/iPad: open this URL in Safari, then Share > Add to Home Screen.";
+    installTitleEl.textContent = "Instalar en iPhone o iPad";
+    installHintEl.textContent = "Queda como app en tu pantalla de inicio, sin App Store.";
+    renderInstallSteps([
+      "Abre esta pagina en Safari.",
+      "Pulsa Compartir y luego Anadir a pantalla de inicio."
+    ]);
+    installStepsEl.classList.remove("hidden");
     return;
   }
 
+  installTitleEl.textContent = "Instala CookieChat en tu dispositivo";
   installHintEl.textContent = "Instala CookieChat para abrirla como app.";
+  installStepsEl.classList.add("hidden");
 }
 
 function showUpdateBanner(worker) {
