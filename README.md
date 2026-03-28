@@ -8,6 +8,7 @@ It is designed for small trusted groups with an approval-based onboarding flow a
 - Private access with Firebase Authentication
 - Admin approval flow for new users
 - Real-time chat powered by Firestore
+- Optional email notifications to admins when a new join request is created
 - Installable as an app on iOS, Android, macOS, and desktop browsers
 - Lightweight frontend (vanilla HTML/CSS/JS)
 
@@ -17,6 +18,7 @@ It is designed for small trusted groups with an approval-based onboarding flow a
 - Auth: Firebase Authentication (Email/Password)
 - Database: Cloud Firestore
 - Hosting: Firebase Hosting
+- Optional backend worker: Firebase Cloud Functions (Node.js)
 
 ## Project structure
 
@@ -27,6 +29,7 @@ It is designed for small trusted groups with an approval-based onboarding flow a
 - `CookieChatWeb/config/firebase-config.example.js` Firebase client config template
 - `CookieChatWeb/firestore.rules` security rules
 - `CookieChatWeb/firebase.json` Firebase deploy config
+- `functions/` Cloud Functions (admin email notifications)
 
 ## Quick start
 
@@ -97,4 +100,35 @@ Open: `http://localhost:5173`
 ```bash
 firebase deploy --project <your-firebase-project-id> --only firestore:rules --config CookieChatWeb/firebase.json
 firebase deploy --project <your-firebase-project-id> --only hosting --config CookieChatWeb/firebase.json
+```
+
+## Optional: Admin Email Notifications (Cloud Functions)
+
+When enabled, every new `joinRequests` document triggers an email to admins.
+
+### 1) Configure SMTP
+
+```bash
+cp functions/.env.example functions/.env.cookiechat-1b1e9
+```
+
+Edit `functions/.env.cookiechat-1b1e9`:
+
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
+- `SMTP_USER`, `SMTP_PASS`
+- `SMTP_FROM`
+- Optional `ADMIN_NOTIFICATION_EMAILS` (comma-separated fallback addresses)
+
+### 2) Install function dependencies
+
+```bash
+cd functions
+npm install
+cd ..
+```
+
+### 3) Deploy functions
+
+```bash
+firebase deploy --project <your-firebase-project-id> --only functions --config CookieChatWeb/firebase.json
 ```

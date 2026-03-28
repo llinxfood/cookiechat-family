@@ -94,7 +94,33 @@ firebase deploy --project <your-firebase-project-id> --only firestore:rules --co
 firebase deploy --project <your-firebase-project-id> --only hosting --config CookieChatWeb/firebase.json
 ```
 
-## 9) Install as an app
+## 9) Optional: Email alerts for admins (Cloud Functions)
+
+If you want admins to receive an email when a new user submits a join request:
+
+1. Configure SMTP:
+
+```bash
+cp functions/.env.example functions/.env.<your-firebase-project-id>
+```
+
+2. Fill SMTP values in that file (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`).
+
+3. Install dependencies:
+
+```bash
+cd functions
+npm install
+cd ..
+```
+
+4. Deploy:
+
+```bash
+firebase deploy --project <your-firebase-project-id> --only functions --config CookieChatWeb/firebase.json
+```
+
+## 10) Install as an app
 
 1. Open the Hosting URL in Safari/Chrome.
 2. iPad/iPhone: Share > `Add to Home Screen`.
