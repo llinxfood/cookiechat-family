@@ -163,6 +163,26 @@ body {
   border: 1px solid rgba(31, 111, 235, 0.25);
 }
 
+.install-card.compact-install {
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.install-card.compact-install .install-title,
+.install-card.compact-install .install-steps {
+  display: none;
+}
+
+.install-card.compact-install .install-hint {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.install-card.compact-install #install-btn {
+  padding: 9px 13px;
+  font-size: 0.95rem;
+}
+
 .update-card {
   display: flex;
   align-items: center;

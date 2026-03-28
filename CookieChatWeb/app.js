@@ -4,7 +4,9 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  sendEmailVerification,
+  reload
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   getFirestore,
@@ -47,6 +49,7 @@ const requestedRoleLabel = document.querySelector("#requested-role-label");
 const displayNameEl = document.querySelector("#display-name");
 const requestedRoleEl = document.querySelector("#requested-role");
 const pendingMessageEl = document.querySelector("#pending-message");
+const verifyEmailBtn = document.querySelector("#verify-email-btn");
 const pendingLogoutBtn = document.querySelector("#pending-logout-btn");
 const logoutBtn = document.querySelector("#logout-btn");
 const messagesEl = document.querySelector("#messages");
@@ -106,6 +109,8 @@ function setupInstallUI() {
   }
 
   if (isIOS()) {
+    installCardEl.classList.remove("compact-install");
+    installCardEl.classList.add("ios-install");
     installCardEl.classList.remove("hidden");
     installBtnEl.classList.add("hidden");
     installTitleEl.textContent = "Instalar en iPhone o iPad";
@@ -118,9 +123,12 @@ function setupInstallUI() {
     return;
   }
 
+  installCardEl.classList.remove("ios-install");
+  installCardEl.classList.add("compact-install");
   installTitleEl.textContent = "Instala CookieChat en tu dispositivo";
-  installHintEl.textContent = "Instala CookieChat para abrirla como app.";
+  installHintEl.textContent = "Abrela como app con un toque desde tu pantalla de inicio.";
   installStepsEl.classList.add("hidden");
+  installBtnEl.classList.remove("hidden");
 }
 
 function showUpdateBanner(worker) {
@@ -406,9 +414,11 @@ async function handleAuthSubmit(event) {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     authSubmitBtn.textContent = "Enviando solicitud...";
     await createJoinRequest(credential.user, displayName, requestedRole);
+    await sendEmailVerification(credential.user).catch(() => {});
     pendingMessageEl.textContent = "Tu solicitud esta pendiente de aprobacion por un administrador.";
+    verifyEmailBtn.classList.remove("hidden");
     setView("pending");
-    setStatus("Solicitud enviada. Esperando aprobacion.");
+    setStatus("Solicitud enviada. Te hemos enviado un email de verificacion.");
   } catch (error) {
     if (authMode === "register" && auth.currentUser) {
       await signOut(auth);
@@ -486,6 +496,21 @@ logoutBtn.addEventListener("click", async () => {
 pendingLogoutBtn.addEventListener("click", async () => {
   await signOut(auth);
 });
+verifyEmailBtn.addEventListener("click", async () => {
+  if (!auth.currentUser) return;
+  try {
+    await reload(auth.currentUser);
+    if (auth.currentUser.emailVerified) {
+      setStatus("Email verificado. Ya puedes continuar.", false);
+      window.location.reload();
+      return;
+    }
+    await sendEmailVerification(auth.currentUser);
+    setStatus("Te hemos reenviado el email de verificacion.");
+  } catch (error) {
+    setStatus(`No se pudo reenviar el email: ${error.message}`, true);
+  }
+});
 
 onAuthStateChanged(auth, async (user) => {
   if (unsubscribeMessages) {
@@ -504,6 +529,7 @@ onAuthStateChanged(auth, async (user) => {
     adminPanel.classList.add("hidden");
     setView("auth");
     setStatus("");
+    verifyEmailBtn.classList.add("hidden");
     return;
   }
 
@@ -512,6 +538,17 @@ onAuthStateChanged(auth, async (user) => {
   try {
     setStatus("Validating access...");
     await loadMembership(user);
+    if (!user.emailVerified) {
+      verifyEmailBtn.classList.remove("hidden");
+      pendingMessageEl.textContent =
+        "Tu cuenta esta aprobada, pero necesitas verificar tu email antes de entrar al chat.";
+      setView("pending");
+      setStatus("Verifica tu email para activar el acceso.");
+      await sendEmailVerification(user).catch(() => {});
+      return;
+    }
+
+    verifyEmailBtn.classList.add("hidden");
     setView("chat");
     setStatus("Connected.");
     watchMessages();
@@ -551,10 +588,18 @@ onAuthStateChanged(auth, async (user) => {
 
     if (request.status === "rejected") {
       pendingMessageEl.textContent = "Your request was rejected. Contact an admin.";
+      verifyEmailBtn.classList.add("hidden");
     } else if (request.status === "approved") {
-      pendingMessageEl.textContent = "Tu solicitud fue aprobada. Cierra sesion y vuelve a entrar.";
+      pendingMessageEl.textContent = user.emailVerified
+        ? "Tu solicitud fue aprobada. Cierra sesion y vuelve a entrar."
+        : "Tu solicitud fue aprobada. Verifica tu email y vuelve a entrar.";
+      verifyEmailBtn.classList.toggle("hidden", user.emailVerified);
+      if (!user.emailVerified) {
+        await sendEmailVerification(user).catch(() => {});
+      }
     } else {
       pendingMessageEl.textContent = "Your request is pending admin approval.";
+      verifyEmailBtn.classList.remove("hidden");
     }
 
     setView("pending");
