@@ -71,6 +71,7 @@ let unsubscribeRequests = null;
 let installPromptEvent = null;
 let waitingServiceWorker = null;
 let isSubmittingAuth = false;
+let canShowInstallCard = false;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 
 function sleep(ms) {
@@ -137,12 +138,13 @@ function setupInstallUI() {
   }
 
   if (isIOS()) {
+    canShowInstallCard = true;
     installCardEl.classList.remove("compact-install");
     installCardEl.classList.add("ios-install");
     installCardEl.classList.remove("hidden");
     installBtnEl.classList.add("hidden");
-    installTitleEl.textContent = "Instalar en iPhone o iPad";
-    installHintEl.textContent = "Queda como app en tu pantalla de inicio, sin App Store.";
+    installTitleEl.textContent = "Instalar en iPhone/iPad";
+    installHintEl.textContent = "Anadela a pantalla de inicio para usarla como app.";
     renderInstallSteps([
       "Abre esta pagina en Safari.",
       "Pulsa Compartir y luego Anadir a pantalla de inicio."
@@ -151,12 +153,14 @@ function setupInstallUI() {
     return;
   }
 
+  canShowInstallCard = false;
   installCardEl.classList.remove("ios-install");
   installCardEl.classList.add("compact-install");
-  installTitleEl.textContent = "Instala CookieChat en tu dispositivo";
-  installHintEl.textContent = "Abrela como app con un toque desde tu pantalla de inicio.";
+  installTitleEl.textContent = "Instalar app";
+  installHintEl.textContent = "Instalar CookieChat";
   installStepsEl.classList.add("hidden");
   installBtnEl.classList.remove("hidden");
+  installCardEl.classList.add("hidden");
 }
 
 function showUpdateBanner(worker) {
@@ -176,7 +180,7 @@ function setView(view) {
   chatCard.classList.toggle("hidden", view !== "chat");
 
   // La tarjeta de instalacion solo es util en pantalla de acceso.
-  if (view === "auth" && !isStandalone()) {
+  if (view === "auth" && !isStandalone() && canShowInstallCard) {
     installCardEl.classList.remove("hidden");
   } else {
     installCardEl.classList.add("hidden");
@@ -685,8 +689,16 @@ if ("serviceWorker" in navigator) {
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   installPromptEvent = event;
-  installCardEl.classList.remove("hidden");
+  canShowInstallCard = true;
+  installCardEl.classList.remove("ios-install");
+  installCardEl.classList.add("compact-install");
+  installTitleEl.textContent = "Instalar app";
+  installHintEl.textContent = "Instalar CookieChat";
+  installStepsEl.classList.add("hidden");
   installBtnEl.classList.remove("hidden");
+  if (!isStandalone() && !auth.currentUser) {
+    installCardEl.classList.remove("hidden");
+  }
 });
 
 renderEmojiBar();
