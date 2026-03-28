@@ -80,7 +80,7 @@ function setupInstallUI() {
   if (isIOS()) {
     installCardEl.classList.remove("hidden");
     installBtnEl.classList.add("hidden");
-    installHintEl.textContent = "iPhone/iPad: Safari > Compartir > Añadir a pantalla de inicio.";
+    installHintEl.textContent = "On iPhone/iPad: open this URL in Safari, then Share > Add to Home Screen.";
     return;
   }
 
@@ -178,14 +178,14 @@ async function loadMembership(user) {
   const familySnap = await getDoc(familyRef);
 
   if (!familySnap.exists()) {
-    throw new Error("No existe la familia configurada.");
+    throw new Error("Configured group was not found.");
   }
 
   const family = familySnap.data();
   const role = family?.members?.[user.uid];
 
   if (!role) {
-    throw new Error("Este usuario no pertenece a la familia autorizada.");
+    throw new Error("This account is not approved in this group.");
   }
 
   currentUserRole = role;
@@ -425,10 +425,10 @@ onAuthStateChanged(auth, async (user) => {
   currentUserId = user.uid;
 
   try {
-    setStatus("Validando acceso familiar...");
+    setStatus("Validating access...");
     await loadMembership(user);
     setView("chat");
-    setStatus("Conectada al chat familiar.");
+    setStatus("Connected.");
     watchMessages();
 
     if (currentUserRole === "admin") {
@@ -451,11 +451,11 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     if (request.status === "rejected") {
-      pendingMessageEl.textContent = "Tu solicitud fue rechazada. Contacta con el administrador de la familia.";
+      pendingMessageEl.textContent = "Your request was rejected. Contact an admin.";
     } else if (request.status === "approved") {
       pendingMessageEl.textContent = "Tu solicitud fue aprobada. Cierra sesion y vuelve a entrar.";
     } else {
-      pendingMessageEl.textContent = "Tu solicitud esta pendiente de aprobacion por un administrador de la familia.";
+      pendingMessageEl.textContent = "Your request is pending admin approval.";
     }
 
     setView("pending");

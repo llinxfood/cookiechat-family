@@ -1,19 +1,19 @@
 {
-  "name": "CookieChat Familia",
+  "name": "CookieChat",
   "short_name": "CookieChat",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#f5f7fb",
   "theme_color": "#1f6feb",
-  "description": "Chat privado familiar",
+  "description": "Private chat with admin-approved access",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icons/icon-192-v2.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icons/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png"
     }
