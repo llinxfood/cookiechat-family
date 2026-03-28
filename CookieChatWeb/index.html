@@ -27,7 +27,20 @@
         <div class="brand-row">
           <img class="hero-wordmark" src="./icons/logo-wordmark-v4.png" alt="CookieChat" />
         </div>
-        <span class="privacy-pill">Privado y por invitacion</span>
+        <div class="topbar-tools">
+          <span id="privacy-pill" class="privacy-pill">Privado y por invitacion</span>
+          <label class="language-picker" for="language-select" aria-label="Language selector">
+            <span>🌐</span>
+            <select id="language-select">
+              <option value="es">ES</option>
+              <option value="en">EN</option>
+              <option value="fr">FR</option>
+              <option value="de">DE</option>
+              <option value="it">IT</option>
+              <option value="pt">PT</option>
+            </select>
+          </label>
+        </div>
       </header>
 
       <section id="status" class="status" aria-live="polite"></section>

@@ -65,6 +65,8 @@ const adminPanelTitleEl = document.querySelector("#admin-panel h3");
 const joinRequestsEl = document.querySelector("#join-requests");
 const pendingBadgeEl = document.querySelector("#pending-badge");
 const notifEnableBtn = document.querySelector("#notif-enable-btn");
+const languageSelectEl = document.querySelector("#language-select");
+const privacyPillEl = document.querySelector("#privacy-pill");
 
 let currentUserRole = null;
 let currentUserId = null;
@@ -82,10 +84,231 @@ let e2eeFingerprint = "";
 let latestMessageDocs = [];
 let missingE2EEKeyNoticeShown = false;
 let lastPendingCount = null;
+let currentLang = "es";
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 const E2EE_PREFIX = "e2ee:v1:";
 const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
 const MAX_STORED_TEXT_LENGTH = 1000;
+const LANG_STORAGE_KEY = "cookiechat.lang";
+const SUPPORTED_LANGS = ["es", "en", "fr", "de", "it", "pt"];
+
+const I18N = {
+  es: {
+    privacyPill: "Privado y por invitacion",
+    install: {
+      app: "Instalar app",
+      cookiechat: "Instalar CookieChat",
+      iosTitle: "Instalar en iPhone/iPad",
+      iosHint: "Anadela a pantalla de inicio para usarla como app.",
+      iosStep1: "Abre esta pagina en Safari.",
+      iosStep2: "Pulsa Compartir y luego Anadir a pantalla de inicio."
+    },
+    update: { available: "Hay una nueva version disponible.", now: "Actualizar ahora" },
+    landing: {
+      title: "Un chat privado, seguro y sencillo.",
+      subtitle: "CookieChat mantiene la conversacion cerrada: solo entran usuarios aprobados por administradores.",
+      f1: "Aprobacion manual de nuevos miembros",
+      f2: "Acceso privado por cuenta autenticada",
+      f3: "Disponible en movil, tablet y ordenador"
+    },
+    auth: {
+      access: "Acceso",
+      newUser: "Nuevo usuario",
+      sendRequest: "Enviar solicitud",
+      continue: "Continuar",
+      name: "Nombre",
+      email: "Email",
+      password: "Contrasena",
+      userType: "Tipo de usuario",
+      adult: "Adulto",
+      child: "Menor"
+    },
+    pending: {
+      title: "Solicitud enviada",
+      default: "Tu solicitud esta pendiente de aprobacion por un administrador.",
+      resend: "Reenviar email de verificacion",
+      logout: "Salir"
+    },
+    chat: {
+      title: "Chat",
+      logout: "Salir",
+      e2eeOff: "E2EE desactivado",
+      e2eeOn: "E2EE activa",
+      e2eeBtn: "Clave E2EE",
+      requests: "Solicitudes de acceso",
+      notify: "Activar avisos",
+      draft: "Escribe un mensaje...",
+      send: "Enviar"
+    },
+    roles: { admin: "admin", adult: "adulto", child: "menor", member: "miembro" }
+  },
+  en: {
+    privacyPill: "Private and invitation-only",
+    install: {
+      app: "Install app",
+      cookiechat: "Install CookieChat",
+      iosTitle: "Install on iPhone/iPad",
+      iosHint: "Add it to your home screen to use it like an app.",
+      iosStep1: "Open this page in Safari.",
+      iosStep2: "Tap Share and then Add to Home Screen."
+    },
+    update: { available: "A new version is available.", now: "Update now" },
+    landing: {
+      title: "A private, safe and simple chat.",
+      subtitle: "CookieChat keeps conversations closed: only admin-approved users can join.",
+      f1: "Manual approval for new members",
+      f2: "Private access with authenticated account",
+      f3: "Available on phone, tablet and desktop"
+    },
+    auth: {
+      access: "Sign in",
+      newUser: "New user",
+      sendRequest: "Send request",
+      continue: "Continue",
+      name: "Name",
+      email: "Email",
+      password: "Password",
+      userType: "User type",
+      adult: "Adult",
+      child: "Child"
+    },
+    pending: {
+      title: "Request sent",
+      default: "Your request is pending admin approval.",
+      resend: "Resend verification email",
+      logout: "Log out"
+    },
+    chat: {
+      title: "Chat",
+      logout: "Log out",
+      e2eeOff: "E2EE off",
+      e2eeOn: "E2EE on",
+      e2eeBtn: "E2EE key",
+      requests: "Access requests",
+      notify: "Enable alerts",
+      draft: "Write a message...",
+      send: "Send"
+    },
+    roles: { admin: "admin", adult: "adult", child: "child", member: "member" }
+  },
+  fr: {
+    privacyPill: "Prive et sur invitation",
+    install: { app: "Installer l'app", cookiechat: "Installer CookieChat", iosTitle: "Installer sur iPhone/iPad", iosHint: "Ajoutez-la a l'ecran d'accueil.", iosStep1: "Ouvrez cette page dans Safari.", iosStep2: "Touchez Partager puis Sur l'ecran d'accueil." },
+    update: { available: "Une nouvelle version est disponible.", now: "Mettre a jour" },
+    landing: { title: "Un chat prive, sur et simple.", subtitle: "CookieChat garde la conversation fermee.", f1: "Validation manuelle des membres", f2: "Acces prive par compte authentifie", f3: "Disponible sur mobile, tablette et ordinateur" },
+    auth: { access: "Acces", newUser: "Nouvel utilisateur", sendRequest: "Envoyer la demande", continue: "Continuer", name: "Nom", email: "Email", password: "Mot de passe", userType: "Type d'utilisateur", adult: "Adulte", child: "Enfant" },
+    pending: { title: "Demande envoyee", default: "Votre demande est en attente d'approbation.", resend: "Renvoyer l'email", logout: "Quitter" },
+    chat: { title: "Chat", logout: "Quitter", e2eeOff: "E2EE desactive", e2eeOn: "E2EE active", e2eeBtn: "Cle E2EE", requests: "Demandes d'acces", notify: "Activer alertes", draft: "Ecrivez un message...", send: "Envoyer" },
+    roles: { admin: "admin", adult: "adulte", child: "enfant", member: "membre" }
+  },
+  de: {
+    privacyPill: "Privat und nur auf Einladung",
+    install: { app: "App installieren", cookiechat: "CookieChat installieren", iosTitle: "Auf iPhone/iPad installieren", iosHint: "Zum Home-Bildschirm hinzufugen.", iosStep1: "Diese Seite in Safari offnen.", iosStep2: "Teilen und dann Zum Home-Bildschirm." },
+    update: { available: "Eine neue Version ist verfugbar.", now: "Jetzt aktualisieren" },
+    landing: { title: "Ein privater, sicherer und einfacher Chat.", subtitle: "CookieChat halt Gesprache geschlossen.", f1: "Manuelle Freigabe neuer Mitglieder", f2: "Privater Zugang mit Konto", f3: "Verfugbar auf Handy, Tablet und Desktop" },
+    auth: { access: "Anmelden", newUser: "Neuer Nutzer", sendRequest: "Anfrage senden", continue: "Weiter", name: "Name", email: "E-Mail", password: "Passwort", userType: "Nutzertyp", adult: "Erwachsen", child: "Kind" },
+    pending: { title: "Anfrage gesendet", default: "Deine Anfrage wartet auf Freigabe.", resend: "Bestatigung erneut senden", logout: "Abmelden" },
+    chat: { title: "Chat", logout: "Abmelden", e2eeOff: "E2EE aus", e2eeOn: "E2EE an", e2eeBtn: "E2EE-Schlussel", requests: "Zugriffsanfragen", notify: "Hinweise aktivieren", draft: "Nachricht schreiben...", send: "Senden" },
+    roles: { admin: "admin", adult: "erwachsen", child: "kind", member: "mitglied" }
+  },
+  it: {
+    privacyPill: "Privata e solo su invito",
+    install: { app: "Installa app", cookiechat: "Installa CookieChat", iosTitle: "Installa su iPhone/iPad", iosHint: "Aggiungila alla schermata Home.", iosStep1: "Apri questa pagina in Safari.", iosStep2: "Tocca Condividi e poi Aggiungi a Home." },
+    update: { available: "E disponibile una nuova versione.", now: "Aggiorna ora" },
+    landing: { title: "Una chat privata, sicura e semplice.", subtitle: "CookieChat mantiene la conversazione chiusa.", f1: "Approvazione manuale dei membri", f2: "Accesso privato con account autenticato", f3: "Disponibile su mobile, tablet e desktop" },
+    auth: { access: "Accesso", newUser: "Nuovo utente", sendRequest: "Invia richiesta", continue: "Continua", name: "Nome", email: "Email", password: "Password", userType: "Tipo utente", adult: "Adulto", child: "Minore" },
+    pending: { title: "Richiesta inviata", default: "La tua richiesta e in attesa di approvazione.", resend: "Reinvia email verifica", logout: "Esci" },
+    chat: { title: "Chat", logout: "Esci", e2eeOff: "E2EE disattivata", e2eeOn: "E2EE attiva", e2eeBtn: "Chiave E2EE", requests: "Richieste di accesso", notify: "Attiva avvisi", draft: "Scrivi un messaggio...", send: "Invia" },
+    roles: { admin: "admin", adult: "adulto", child: "minore", member: "membro" }
+  },
+  pt: {
+    privacyPill: "Privado e apenas por convite",
+    install: { app: "Instalar app", cookiechat: "Instalar CookieChat", iosTitle: "Instalar no iPhone/iPad", iosHint: "Adicione a tela inicial para usar como app.", iosStep1: "Abra esta pagina no Safari.", iosStep2: "Toque em Compartilhar e depois Adicionar a tela inicial." },
+    update: { available: "Ha uma nova versao disponivel.", now: "Atualizar agora" },
+    landing: { title: "Um chat privado, seguro e simples.", subtitle: "CookieChat mantem a conversa fechada.", f1: "Aprovacao manual de novos membros", f2: "Acesso privado com conta autenticada", f3: "Disponivel em telemovel, tablet e computador" },
+    auth: { access: "Entrar", newUser: "Novo utilizador", sendRequest: "Enviar pedido", continue: "Continuar", name: "Nome", email: "Email", password: "Senha", userType: "Tipo de utilizador", adult: "Adulto", child: "Crianca" },
+    pending: { title: "Pedido enviado", default: "O seu pedido esta pendente de aprovacao.", resend: "Reenviar email de verificacao", logout: "Sair" },
+    chat: { title: "Chat", logout: "Sair", e2eeOff: "E2EE desligado", e2eeOn: "E2EE ligado", e2eeBtn: "Chave E2EE", requests: "Pedidos de acesso", notify: "Ativar alertas", draft: "Escreva uma mensagem...", send: "Enviar" },
+    roles: { admin: "admin", adult: "adulto", child: "crianca", member: "membro" }
+  }
+};
+
+function detectLanguage() {
+  const saved = localStorage.getItem(LANG_STORAGE_KEY);
+  if (saved && SUPPORTED_LANGS.includes(saved)) return saved;
+  const browser = (navigator.language || "es").slice(0, 2).toLowerCase();
+  return SUPPORTED_LANGS.includes(browser) ? browser : "es";
+}
+
+function t(path, fallback = "") {
+  const source = I18N[currentLang] || I18N.es;
+  const value = path.split(".").reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), source);
+  if (typeof value === "string") return value;
+  if (fallback) return fallback;
+  const fallbackValue = path.split(".").reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), I18N.es);
+  return typeof fallbackValue === "string" ? fallbackValue : path;
+}
+
+function applyStaticTranslations() {
+  const setLabelPrefix = (labelEl, text) => {
+    if (!labelEl) return;
+    if (labelEl.firstChild && labelEl.firstChild.nodeType === Node.TEXT_NODE) {
+      labelEl.firstChild.nodeValue = `${text} `;
+      return;
+    }
+    labelEl.insertBefore(document.createTextNode(`${text} `), labelEl.firstChild);
+  };
+
+  if (privacyPillEl) privacyPillEl.textContent = t("privacyPill");
+  if (updateBtnEl) updateBtnEl.textContent = t("update.now");
+  if (document.querySelector(".update-text")) document.querySelector(".update-text").textContent = t("update.available");
+  if (document.querySelector(".hero h1")) document.querySelector(".hero h1").textContent = t("landing.title");
+  if (document.querySelector(".hero p")) document.querySelector(".hero p").textContent = t("landing.subtitle");
+
+  const featureItems = document.querySelectorAll(".feature-list li");
+  if (featureItems[0]) featureItems[0].textContent = t("landing.f1");
+  if (featureItems[1]) featureItems[1].textContent = t("landing.f2");
+  if (featureItems[2]) featureItems[2].textContent = t("landing.f3");
+
+  if (document.querySelector("#auth-card h2")) document.querySelector("#auth-card h2").textContent = authMode === "register" ? t("auth.newUser") : t("auth.access");
+  modeLoginBtn.textContent = t("auth.access");
+  modeRegisterBtn.textContent = t("auth.newUser");
+  setLabelPrefix(displayNameLabel, t("auth.name"));
+  setLabelPrefix(requestedRoleLabel, t("auth.userType"));
+  setLabelPrefix(document.querySelector("#email")?.closest("label"), t("auth.email"));
+  setLabelPrefix(document.querySelector("#password")?.closest("label"), t("auth.password"));
+  requestedRoleEl.querySelector('option[value="adult"]').textContent = t("auth.adult");
+  requestedRoleEl.querySelector('option[value="child"]').textContent = t("auth.child");
+
+  const pendingTitle = document.querySelector("#pending-card h2");
+  if (pendingTitle) pendingTitle.textContent = t("pending.title");
+  verifyEmailBtn.textContent = t("pending.resend");
+  pendingLogoutBtn.textContent = t("pending.logout");
+
+  const chatTitle = document.querySelector("#chat-card h2");
+  if (chatTitle) chatTitle.textContent = t("chat.title");
+  logoutBtn.textContent = t("chat.logout");
+  e2eeKeyBtn.textContent = t("chat.e2eeBtn");
+  notifEnableBtn.textContent = t("chat.notify");
+  draftEl.placeholder = t("chat.draft");
+  if (composer.querySelector('button[type="submit"]')) composer.querySelector('button[type="submit"]').textContent = t("chat.send");
+}
+
+function setLanguage(lang) {
+  const nextLang = SUPPORTED_LANGS.includes(lang) ? lang : "es";
+  currentLang = nextLang;
+  localStorage.setItem(LANG_STORAGE_KEY, nextLang);
+  document.documentElement.lang = nextLang;
+  if (languageSelectEl) languageSelectEl.value = nextLang;
+  applyStaticTranslations();
+  setupInstallUI();
+  refreshE2EEIndicator();
+  updateNotificationButtonLabel();
+  if (currentUserIsAdmin && lastPendingCount !== null) {
+    adminPanelTitleEl.textContent = `${t("chat.requests")} (${lastPendingCount})`;
+    updatePendingBadge(lastPendingCount);
+  }
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -99,34 +322,35 @@ function updateNotificationButtonLabel() {
   if (!notifEnableBtn) return;
   if (!supportsBrowserNotifications()) {
     notifEnableBtn.disabled = true;
-    notifEnableBtn.textContent = "Avisos no compatibles";
+    notifEnableBtn.textContent = currentLang === "es" ? "Avisos no compatibles" : "Alerts unsupported";
     return;
   }
   notifEnableBtn.disabled = false;
-  notifEnableBtn.textContent =
-    Notification.permission === "granted" ? "Avisos activados" : "Activar avisos";
+  notifEnableBtn.textContent = Notification.permission === "granted" ? (currentLang === "es" ? "Avisos activados" : "Alerts enabled") : t("chat.notify");
 }
 
 function updatePendingBadge(count) {
   if (!pendingBadgeEl) return;
   if (count <= 0) {
     pendingBadgeEl.classList.add("hidden");
-    pendingBadgeEl.textContent = "0 nuevas";
+    pendingBadgeEl.textContent = currentLang === "es" ? "0 nuevas" : "0 new";
     return;
   }
   pendingBadgeEl.classList.remove("hidden");
-  pendingBadgeEl.textContent = `${count} pendiente${count === 1 ? "" : "s"}`;
+  pendingBadgeEl.textContent = currentLang === "es" ? `${count} pendiente${count === 1 ? "" : "s"}` : `${count} pending`;
 }
 
 function notifyNewJoinRequests(newCount, pendingDocs) {
   if (newCount <= 0) return;
   const latest = pendingDocs[0]?.data();
-  const who = latest?.displayName || latest?.email || "Nuevo usuario";
-  setStatus(`Nueva solicitud de acceso: ${who}.`);
+  const who = latest?.displayName || latest?.email || (currentLang === "es" ? "Nuevo usuario" : "New user");
+  setStatus(currentLang === "es" ? `Nueva solicitud de acceso: ${who}.` : `New access request: ${who}.`);
 
   if (supportsBrowserNotifications() && Notification.permission === "granted") {
-    const plural = newCount === 1 ? "nueva solicitud" : `${newCount} nuevas solicitudes`;
-    const body = `${plural}. Abre CookieChat para aprobar o rechazar.`;
+    const body =
+      currentLang === "es"
+        ? `${newCount === 1 ? "nueva solicitud" : `${newCount} nuevas solicitudes`}. Abre CookieChat para aprobar o rechazar.`
+        : `${newCount === 1 ? "new request" : `${newCount} new requests`}. Open CookieChat to review.`;
     new Notification("CookieChat", { body });
   }
 
@@ -161,7 +385,7 @@ function uint8ToHex(input) {
 
 async function deriveE2EE(passphrase) {
   if (!window.crypto?.subtle) {
-    throw new Error("Este navegador no soporta cifrado Web Crypto.");
+    throw new Error(currentLang === "es" ? "Este navegador no soporta cifrado Web Crypto." : "This browser does not support Web Crypto.");
   }
 
   const encoder = new TextEncoder();
@@ -228,19 +452,21 @@ async function decryptText(payload) {
 
 function refreshE2EEIndicator() {
   if (!e2eeIndicatorEl) return;
-  e2eeIndicatorEl.textContent = e2eeKey ? `E2EE activa · ${e2eeFingerprint}` : "E2EE desactivado";
+  e2eeIndicatorEl.textContent = e2eeKey ? `${t("chat.e2eeOn")} · ${e2eeFingerprint}` : t("chat.e2eeOff");
 }
 
 async function promptAndSetE2EEKey() {
   const typed = window.prompt(
-    "Introduce la clave familiar E2EE. Debe ser la misma para toda la familia.",
+    currentLang === "es"
+      ? "Introduce la clave familiar E2EE. Debe ser la misma para toda la familia."
+      : "Enter the family E2EE key. It must be the same for everyone.",
     ""
   );
 
   if (typed === null) return false;
   const passphrase = typed.trim();
   if (!passphrase || passphrase.length < 8) {
-    setStatus("La clave E2EE debe tener al menos 8 caracteres.", true);
+    setStatus(currentLang === "es" ? "La clave E2EE debe tener al menos 8 caracteres." : "E2EE key must be at least 8 characters.", true);
     return false;
   }
 
@@ -250,13 +476,13 @@ async function promptAndSetE2EEKey() {
     e2eeFingerprint = fingerprint;
     missingE2EEKeyNoticeShown = false;
     refreshE2EEIndicator();
-    setStatus(`Clave E2EE configurada (${fingerprint}).`);
+    setStatus(currentLang === "es" ? `Clave E2EE configurada (${fingerprint}).` : `E2EE key set (${fingerprint}).`);
     if (latestMessageDocs.length) {
       await renderMessages(latestMessageDocs);
     }
     return true;
   } catch (error) {
-    setStatus(`No se pudo configurar E2EE: ${error.message}`, true);
+    setStatus(currentLang === "es" ? `No se pudo configurar E2EE: ${error.message}` : `Failed to configure E2EE: ${error.message}`, true);
     return false;
   }
 }
@@ -264,13 +490,13 @@ async function promptAndSetE2EEKey() {
 function roleLabel(role) {
   switch (role) {
     case "admin":
-      return "admin";
+      return t("roles.admin");
     case "adult":
-      return "adulto";
+      return t("roles.adult");
     case "child":
-      return "menor";
+      return t("roles.child");
     default:
-      return "miembro";
+      return t("roles.member");
   }
 }
 
@@ -284,7 +510,7 @@ function inferDisplayName(user) {
     return emailName.charAt(0).toUpperCase() + emailName.slice(1);
   }
 
-  return "Usuario";
+  return currentLang === "es" ? "Usuario" : "User";
 }
 
 function initialsFromName(name) {
@@ -334,11 +560,11 @@ function setupInstallUI() {
     installCardEl.classList.add("ios-install");
     installCardEl.classList.remove("hidden");
     installBtnEl.classList.add("hidden");
-    installTitleEl.textContent = "Instalar en iPhone/iPad";
-    installHintEl.textContent = "Anadela a pantalla de inicio para usarla como app.";
+    installTitleEl.textContent = t("install.iosTitle");
+    installHintEl.textContent = t("install.iosHint");
     renderInstallSteps([
-      "Abre esta pagina en Safari.",
-      "Pulsa Compartir y luego Anadir a pantalla de inicio."
+      t("install.iosStep1"),
+      t("install.iosStep2")
     ]);
     installStepsEl.classList.remove("hidden");
     return;
@@ -347,8 +573,8 @@ function setupInstallUI() {
   canShowInstallCard = false;
   installCardEl.classList.remove("ios-install");
   installCardEl.classList.add("compact-install");
-  installTitleEl.textContent = "Instalar app";
-  installHintEl.textContent = "Instalar CookieChat";
+  installTitleEl.textContent = t("install.app");
+  installHintEl.textContent = t("install.cookiechat");
   installStepsEl.classList.add("hidden");
   installBtnEl.classList.remove("hidden");
   installCardEl.classList.add("hidden");
@@ -381,8 +607,8 @@ function setView(view) {
 function setAuthMode(mode) {
   authMode = mode;
   const register = mode === "register";
-  document.querySelector("#auth-card h2").textContent = register ? "Nuevo usuario" : "Acceso";
-  authSubmitBtn.textContent = register ? "Enviar solicitud" : "Continuar";
+  document.querySelector("#auth-card h2").textContent = register ? t("auth.newUser") : t("auth.access");
+  authSubmitBtn.textContent = register ? t("auth.sendRequest") : t("auth.continue");
   displayNameLabel.classList.toggle("hidden", !register);
   requestedRoleLabel.classList.toggle("hidden", !register);
   displayNameEl.required = register;
@@ -393,7 +619,7 @@ function setAuthMode(mode) {
 function formatDate(rawDate) {
   if (!rawDate) return "";
   const date = rawDate.toDate ? rawDate.toDate() : new Date(rawDate);
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat(currentLang, {
     hour: "2-digit",
     minute: "2-digit",
     day: "2-digit",
@@ -438,7 +664,7 @@ async function renderMessages(docs) {
 
     const senderName =
       message.senderName ||
-      (message.senderId && message.senderId === currentUserId ? currentUserName : "Usuario");
+      (message.senderId && message.senderId === currentUserId ? currentUserName : (currentLang === "es" ? "Usuario" : "User"));
     const roleText = roleLabel(message.senderRole);
 
     const header = document.createElement("div");
@@ -462,7 +688,7 @@ async function renderMessages(docs) {
       text.textContent = await decryptText(rawText);
     } catch {
       text.textContent = isEncryptedPayload(rawText)
-        ? "Mensaje cifrado. Configura o revisa la clave E2EE."
+        ? (currentLang === "es" ? "Mensaje cifrado. Configura o revisa la clave E2EE." : "Encrypted message. Configure or review your E2EE key.")
         : rawText;
     }
 
@@ -477,7 +703,7 @@ async function renderMessages(docs) {
 
   if (hasEncryptedMessages && !e2eeKey && !missingE2EEKeyNoticeShown) {
     missingE2EEKeyNoticeShown = true;
-    setStatus("Hay mensajes cifrados. Pulsa 'Clave E2EE' para leerlos.");
+    setStatus(currentLang === "es" ? "Hay mensajes cifrados. Pulsa 'Clave E2EE' para leerlos." : "There are encrypted messages. Tap 'E2EE key' to read them.");
   }
 }
 
@@ -486,7 +712,7 @@ async function loadMembership(user) {
   const familySnap = await getDoc(familyRef);
 
   if (!familySnap.exists()) {
-    throw new Error("No se encontro el grupo configurado.");
+    throw new Error(currentLang === "es" ? "No se encontro el grupo configurado." : "Configured family group was not found.");
   }
 
   const family = familySnap.data();
@@ -495,7 +721,7 @@ async function loadMembership(user) {
   const storedName = family?.memberNames?.[user.uid];
 
   if (!role) {
-    throw new Error("Esta cuenta no esta aprobada en este grupo.");
+    throw new Error(currentLang === "es" ? "Esta cuenta no esta aprobada en este grupo." : "This account is not approved in this family.");
   }
 
   let resolvedName = (storedName && String(storedName).trim()) || "";
@@ -527,7 +753,7 @@ function watchMessages() {
       void renderMessages(snapshot.docs);
     },
     (error) => {
-      setStatus(`Error cargando mensajes: ${error.message}`, true);
+      setStatus(currentLang === "es" ? `Error cargando mensajes: ${error.message}` : `Error loading messages: ${error.message}`, true);
     }
   );
 }
@@ -536,7 +762,7 @@ function renderJoinRequests(snapshot) {
   joinRequestsEl.innerHTML = "";
   const pendingDocs = snapshot.docs.filter((docSnap) => docSnap.data().status === "pending");
   const pendingCount = pendingDocs.length;
-  adminPanelTitleEl.textContent = `Solicitudes de acceso (${pendingCount})`;
+  adminPanelTitleEl.textContent = `${t("chat.requests")} (${pendingCount})`;
   updatePendingBadge(pendingCount);
 
   if (lastPendingCount !== null && pendingCount > lastPendingCount) {
@@ -546,7 +772,7 @@ function renderJoinRequests(snapshot) {
 
   if (!pendingDocs.length) {
     const empty = document.createElement("li");
-    empty.textContent = "No hay solicitudes pendientes.";
+    empty.textContent = currentLang === "es" ? "No hay solicitudes pendientes." : "No pending requests.";
     joinRequestsEl.appendChild(empty);
     return;
   }
@@ -555,20 +781,23 @@ function renderJoinRequests(snapshot) {
     const request = docSnap.data();
     const li = document.createElement("li");
     const requestedRole = request.requestedRole || "adult";
-    const requestedName = request.displayName || "Sin nombre";
-    const displayName = request.displayName || "Sin nombre";
+    const requestedName = request.displayName || (currentLang === "es" ? "Sin nombre" : "No name");
+    const displayName = request.displayName || (currentLang === "es" ? "Sin nombre" : "No name");
     const email = request.email || "sin-email";
 
     const meta = document.createElement("p");
     meta.className = "request-meta";
-    meta.textContent = `${displayName} · ${email} · solicita rol ${roleLabel(requestedRole)}`;
+    meta.textContent =
+      currentLang === "es"
+        ? `${displayName} · ${email} · solicita rol ${roleLabel(requestedRole)}`
+        : `${displayName} · ${email} · requested role ${roleLabel(requestedRole)}`;
 
     const actions = document.createElement("div");
     actions.className = "request-actions";
 
     const approveBtn = document.createElement("button");
     approveBtn.type = "button";
-    approveBtn.textContent = "Aprobar";
+    approveBtn.textContent = currentLang === "es" ? "Aprobar" : "Approve";
     approveBtn.addEventListener("click", async () => {
       await reviewJoinRequest(docSnap.id, requestedRole, "approved", requestedName);
     });
@@ -576,7 +805,7 @@ function renderJoinRequests(snapshot) {
     const rejectBtn = document.createElement("button");
     rejectBtn.type = "button";
     rejectBtn.className = "reject";
-    rejectBtn.textContent = "Rechazar";
+    rejectBtn.textContent = currentLang === "es" ? "Rechazar" : "Reject";
     rejectBtn.addEventListener("click", async () => {
       await reviewJoinRequest(docSnap.id, requestedRole, "rejected");
     });
@@ -597,7 +826,7 @@ function watchJoinRequests() {
       renderJoinRequests(snapshot);
     },
     (error) => {
-      setStatus(`Error cargando solicitudes: ${error.message}`, true);
+      setStatus(currentLang === "es" ? `Error cargando solicitudes: ${error.message}` : `Error loading requests: ${error.message}`, true);
     }
   );
 }
@@ -627,7 +856,7 @@ async function createJoinRequest(user, displayName, requestedRole) {
   throw new Error("join-request-not-visible-yet");
 }
 
-async function reviewJoinRequest(targetUserId, role, action, displayName = "Usuario") {
+async function reviewJoinRequest(targetUserId, role, action, displayName = "") {
   if (!auth.currentUser || !currentUserId || !currentUserIsAdmin) return;
   const familyRef = doc(db, "families", familyId);
   const requestRef = doc(db, "families", familyId, "joinRequests", targetUserId);
@@ -641,7 +870,7 @@ async function reviewJoinRequest(targetUserId, role, action, displayName = "Usua
           [targetUserId]: role
         },
         memberNames: {
-          [targetUserId]: String(displayName).trim() || "Usuario"
+          [targetUserId]: String(displayName).trim() || (currentLang === "es" ? "Usuario" : "User")
         }
       },
       { merge: true }
@@ -660,7 +889,7 @@ async function reviewJoinRequest(targetUserId, role, action, displayName = "Usua
   );
 
   await batch.commit();
-  setStatus(action === "approved" ? "Usuario aprobado." : "Solicitud rechazada.");
+  setStatus(action === "approved" ? (currentLang === "es" ? "Usuario aprobado." : "User approved.") : (currentLang === "es" ? "Solicitud rechazada." : "Request rejected."));
 }
 
 async function handleAuthSubmit(event) {
@@ -674,8 +903,8 @@ async function handleAuthSubmit(event) {
 
   try {
     if (authMode === "login") {
-      authSubmitBtn.textContent = "Entrando...";
-      setStatus("Entrando...");
+      authSubmitBtn.textContent = currentLang === "es" ? "Entrando..." : "Signing in...";
+      setStatus(currentLang === "es" ? "Entrando..." : "Signing in...");
       await signInWithEmailAndPassword(auth, email, password);
       return;
     }
@@ -683,43 +912,43 @@ async function handleAuthSubmit(event) {
     const displayName = displayNameEl.value.trim();
     const requestedRole = requestedRoleEl.value;
     if (!displayName) {
-      setStatus("Escribe un nombre para la solicitud.", true);
+      setStatus(currentLang === "es" ? "Escribe un nombre para la solicitud." : "Write a name for the request.", true);
       return;
     }
 
-    authSubmitBtn.textContent = "Creando...";
-    setStatus("Creando cuenta...");
+    authSubmitBtn.textContent = currentLang === "es" ? "Creando..." : "Creating...";
+    setStatus(currentLang === "es" ? "Creando cuenta..." : "Creating account...");
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(credential.user, { displayName }).catch(() => {});
-    authSubmitBtn.textContent = "Enviando solicitud...";
+    authSubmitBtn.textContent = currentLang === "es" ? "Enviando solicitud..." : "Sending request...";
     await createJoinRequest(credential.user, displayName, requestedRole);
     await sendEmailVerification(credential.user).catch(() => {});
-    pendingMessageEl.textContent = "Tu solicitud esta pendiente de aprobacion por un administrador.";
+    pendingMessageEl.textContent = t("pending.default");
     verifyEmailBtn.classList.remove("hidden");
     setView("pending");
-    setStatus("Solicitud enviada. Te hemos enviado un email de verificacion.");
+    setStatus(currentLang === "es" ? "Solicitud enviada. Te hemos enviado un email de verificacion." : "Request sent. We have sent you a verification email.");
   } catch (error) {
     if (authMode === "register" && auth.currentUser) {
       await signOut(auth);
     }
     if (error?.code === "auth/email-already-in-use") {
-      setStatus("Ese email ya existe. Usa Acceso o prueba otro correo.", true);
+      setStatus(currentLang === "es" ? "Ese email ya existe. Usa Acceso o prueba otro correo." : "This email already exists. Use Sign in or try another email.", true);
     } else if (error?.code === "auth/invalid-credential") {
-      setStatus("Credenciales no validas. Revisa email/contrasena o usa Nuevo usuario.", true);
+      setStatus(currentLang === "es" ? "Credenciales no validas. Revisa email/contrasena o usa Nuevo usuario." : "Invalid credentials. Check email/password or use New user.", true);
     } else if (error?.code === "permission-denied") {
       setStatus(
         `Sin permisos para guardar la solicitud en families/${familyId}/joinRequests. Revisa Firestore Rules, familyId y despliegue de reglas.`,
         true
       );
     } else if (error?.message === "join-request-not-visible-yet") {
-      setStatus("La solicitud tarda mas de lo normal. Intenta entrar de nuevo en unos segundos.", true);
+      setStatus(currentLang === "es" ? "La solicitud tarda mas de lo normal. Intenta entrar de nuevo en unos segundos." : "Request is taking longer than normal. Try again in a few seconds.", true);
     } else {
-      setStatus(`No se pudo continuar: ${error.message}`, true);
+      setStatus(currentLang === "es" ? `No se pudo continuar: ${error.message}` : `Could not continue: ${error.message}`, true);
     }
   } finally {
     isSubmittingAuth = false;
     authSubmitBtn.disabled = false;
-    authSubmitBtn.textContent = authMode === "register" ? "Enviar solicitud" : "Continuar";
+    authSubmitBtn.textContent = authMode === "register" ? t("auth.sendRequest") : t("auth.continue");
   }
 }
 
@@ -732,7 +961,7 @@ async function handleSend(event) {
   try {
     const storedText = await encryptText(text);
     if (storedText.length > MAX_STORED_TEXT_LENGTH) {
-      setStatus("Mensaje demasiado largo para enviarlo cifrado. Acortalo un poco.", true);
+      setStatus(currentLang === "es" ? "Mensaje demasiado largo para enviarlo cifrado. Acortalo un poco." : "Message too long to send encrypted. Shorten it a bit.", true);
       return;
     }
 
@@ -747,7 +976,7 @@ async function handleSend(event) {
     });
     draftEl.value = "";
   } catch (error) {
-    setStatus(`No se pudo enviar: ${error.message}`, true);
+    setStatus(currentLang === "es" ? `No se pudo enviar: ${error.message}` : `Could not send: ${error.message}`, true);
   }
 }
 
@@ -770,9 +999,9 @@ emojiToggleBtn.addEventListener("click", () => {
 installBtnEl.addEventListener("click", async () => {
   if (!installPromptEvent) {
     if (isIOS()) {
-      setStatus("En iPhone/iPad: Safari > Compartir > Anadir a pantalla de inicio.");
+      setStatus(currentLang === "es" ? "En iPhone/iPad: Safari > Compartir > Anadir a pantalla de inicio." : "On iPhone/iPad: Safari > Share > Add to Home Screen.");
     } else {
-      setStatus("Instalacion no disponible ahora mismo en este navegador.", true);
+      setStatus(currentLang === "es" ? "Instalacion no disponible ahora mismo en este navegador." : "Install is not available right now in this browser.", true);
     }
     return;
   }
@@ -780,7 +1009,7 @@ installBtnEl.addEventListener("click", async () => {
   try {
     const choice = await installPromptEvent.userChoice;
     if (choice?.outcome === "accepted") {
-      setStatus("CookieChat instalada.");
+      setStatus(currentLang === "es" ? "CookieChat instalada." : "CookieChat installed.");
     }
   } finally {
     installPromptEvent = null;
@@ -805,7 +1034,9 @@ e2eeKeyBtn.addEventListener("click", async () => {
     return;
   }
 
-  const shouldChange = window.confirm("Ya hay una clave E2EE activa. Quieres cambiarla?");
+  const shouldChange = window.confirm(
+    currentLang === "es" ? "Ya hay una clave E2EE activa. Quieres cambiarla?" : "An E2EE key is already active. Do you want to change it?"
+  );
   if (!shouldChange) return;
   e2eeKey = null;
   e2eeFingerprint = "";
@@ -820,24 +1051,24 @@ verifyEmailBtn.addEventListener("click", async () => {
   try {
     await reload(auth.currentUser);
     if (auth.currentUser.emailVerified) {
-      setStatus("Email verificado. Ya puedes continuar.", false);
+      setStatus(currentLang === "es" ? "Email verificado. Ya puedes continuar." : "Email verified. You can continue now.", false);
       window.location.reload();
       return;
     }
     await sendEmailVerification(auth.currentUser);
-    setStatus("Te hemos reenviado el email de verificacion.");
+    setStatus(currentLang === "es" ? "Te hemos reenviado el email de verificacion." : "Verification email resent.");
   } catch (error) {
-    setStatus(`No se pudo reenviar el email: ${error.message}`, true);
+    setStatus(currentLang === "es" ? `No se pudo reenviar el email: ${error.message}` : `Could not resend email: ${error.message}`, true);
   }
 });
 notifEnableBtn.addEventListener("click", async () => {
   if (!supportsBrowserNotifications()) {
-    setStatus("Este navegador no soporta notificaciones.", true);
+    setStatus(currentLang === "es" ? "Este navegador no soporta notificaciones." : "This browser does not support notifications.", true);
     return;
   }
 
   if (Notification.permission === "granted") {
-    setStatus("Avisos ya activados.");
+    setStatus(currentLang === "es" ? "Avisos ya activados." : "Alerts already enabled.");
     return;
   }
 
@@ -845,12 +1076,12 @@ notifEnableBtn.addEventListener("click", async () => {
     const result = await Notification.requestPermission();
     updateNotificationButtonLabel();
     if (result === "granted") {
-      setStatus("Avisos activados en este navegador.");
+      setStatus(currentLang === "es" ? "Avisos activados en este navegador." : "Alerts enabled in this browser.");
     } else {
-      setStatus("Permiso de avisos no concedido.", true);
+      setStatus(currentLang === "es" ? "Permiso de avisos no concedido." : "Notification permission was not granted.", true);
     }
   } catch (error) {
-    setStatus(`No se pudieron activar avisos: ${error.message}`, true);
+    setStatus(currentLang === "es" ? `No se pudieron activar avisos: ${error.message}` : `Could not enable alerts: ${error.message}`, true);
   }
 });
 
@@ -867,7 +1098,7 @@ onAuthStateChanged(auth, async (user) => {
   if (!user) {
     currentUserRole = null;
     currentUserId = null;
-    currentUserName = "Usuario";
+    currentUserName = currentLang === "es" ? "Usuario" : "User";
     currentUserIsAdmin = false;
     e2eeKey = null;
     e2eeFingerprint = "";
@@ -886,21 +1117,23 @@ onAuthStateChanged(auth, async (user) => {
   currentUserName = inferDisplayName(user);
 
   try {
-    setStatus("Validando acceso...");
+    setStatus(currentLang === "es" ? "Validando acceso..." : "Validating access...");
     await loadMembership(user);
     if (!user.emailVerified) {
       verifyEmailBtn.classList.remove("hidden");
       pendingMessageEl.textContent =
-        "Tu cuenta esta aprobada, pero necesitas verificar tu email antes de entrar al chat.";
+        currentLang === "es"
+          ? "Tu cuenta esta aprobada, pero necesitas verificar tu email antes de entrar al chat."
+          : "Your account is approved, but you need to verify your email before entering chat.";
       setView("pending");
-      setStatus("Verifica tu email para activar el acceso.");
+      setStatus(currentLang === "es" ? "Verifica tu email para activar el acceso." : "Verify your email to enable access.");
       await sendEmailVerification(user).catch(() => {});
       return;
     }
 
     verifyEmailBtn.classList.add("hidden");
     setView("chat");
-    setStatus("Conectada.");
+    setStatus(currentLang === "es" ? "Conectada." : "Connected.");
     watchMessages();
 
     if (currentUserIsAdmin) {
@@ -926,37 +1159,37 @@ onAuthStateChanged(auth, async (user) => {
       }
       if (!retriedRequest) {
         await signOut(auth);
-        setStatus("Acceso denegado: no eres miembro y no hay solicitud activa.", true);
+        setStatus(currentLang === "es" ? "Acceso denegado: no eres miembro y no hay solicitud activa." : "Access denied: not a member and no active request.", true);
         return;
       }
 
-      pendingMessageEl.textContent = "Tu solicitud esta pendiente de aprobacion por un administrador.";
+      pendingMessageEl.textContent = t("pending.default");
       setView("pending");
-      setStatus("Esperando aprobacion.");
+      setStatus(currentLang === "es" ? "Esperando aprobacion." : "Waiting for approval.");
       return;
     }
 
     if (request.status === "rejected") {
-      pendingMessageEl.textContent = "Tu solicitud fue rechazada. Contacta con una administradora.";
+      pendingMessageEl.textContent = currentLang === "es" ? "Tu solicitud fue rechazada. Contacta con una administradora." : "Your request was rejected. Contact an administrator.";
       verifyEmailBtn.classList.add("hidden");
     } else if (request.status === "approved") {
       pendingMessageEl.textContent = user.emailVerified
-        ? "Tu solicitud fue aprobada. Cierra sesion y vuelve a entrar."
-        : "Tu solicitud fue aprobada. Verifica tu email y vuelve a entrar.";
+        ? (currentLang === "es" ? "Tu solicitud fue aprobada. Cierra sesion y vuelve a entrar." : "Your request was approved. Log out and sign in again.")
+        : (currentLang === "es" ? "Tu solicitud fue aprobada. Verifica tu email y vuelve a entrar." : "Your request was approved. Verify your email and sign in again.");
       verifyEmailBtn.classList.toggle("hidden", user.emailVerified);
       if (!user.emailVerified) {
         await sendEmailVerification(user).catch(() => {});
       }
     } else {
-      pendingMessageEl.textContent = "Tu solicitud esta pendiente de aprobacion por una administradora.";
+      pendingMessageEl.textContent = currentLang === "es" ? "Tu solicitud esta pendiente de aprobacion por una administradora." : "Your request is pending administrator approval.";
       verifyEmailBtn.classList.remove("hidden");
     }
 
     setView("pending");
-    setStatus("Esperando aprobacion.");
+    setStatus(currentLang === "es" ? "Esperando aprobacion." : "Waiting for approval.");
   } catch (error) {
     await signOut(auth);
-    setStatus(`Acceso denegado: ${error.message}`, true);
+    setStatus(currentLang === "es" ? `Acceso denegado: ${error.message}` : `Access denied: ${error.message}`, true);
   }
 });
 
@@ -1003,8 +1236,8 @@ window.addEventListener("beforeinstallprompt", (event) => {
   canShowInstallCard = true;
   installCardEl.classList.remove("ios-install");
   installCardEl.classList.add("compact-install");
-  installTitleEl.textContent = "Instalar app";
-  installHintEl.textContent = "Instalar CookieChat";
+  installTitleEl.textContent = t("install.app");
+  installHintEl.textContent = t("install.cookiechat");
   installStepsEl.classList.add("hidden");
   installBtnEl.classList.remove("hidden");
   if (!isStandalone() && !auth.currentUser) {
@@ -1016,9 +1249,16 @@ window.addEventListener("appinstalled", () => {
   canShowInstallCard = false;
   installPromptEvent = null;
   installCardEl.classList.add("hidden");
-  setStatus("CookieChat instalada.");
+  setStatus(currentLang === "es" ? "CookieChat instalada." : "CookieChat installed.");
 });
 
+if (languageSelectEl) {
+  languageSelectEl.addEventListener("change", (event) => {
+    setLanguage(event.target.value);
+  });
+}
+
+setLanguage(detectLanguage());
 renderEmojiBar();
 setupInstallUI();
 setAuthMode("login");
