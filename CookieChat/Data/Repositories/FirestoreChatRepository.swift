@@ -20,7 +20,10 @@ struct FirestoreChatRepository: ChatRepository {
     }
 
     func loadMessages() async throws -> [ChatMessage] {
-        let snapshot = try await collection.order(by: "createdAt", descending: false).getDocuments()
+        let snapshot = try await collection
+            .order(by: "createdAt", descending: false)
+            .limit(to: 200)
+            .getDocuments()
         return snapshot.documents.compactMap { document in
             let data = document.data()
             guard
@@ -46,10 +49,13 @@ struct FirestoreChatRepository: ChatRepository {
     }
 
     func sendText(_ text: String, senderId: String, senderRole: UserRole) async throws {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 1000 else { return }
+
         try await collection.addDocument(data: [
             "senderId": senderId,
             "senderRole": senderRole.rawValue,
-            "text": text,
+            "text": trimmed,
             "createdAt": Timestamp(date: Date()),
             "type": "text"
         ])

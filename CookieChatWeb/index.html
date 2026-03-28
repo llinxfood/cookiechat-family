@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1f6feb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="CookieChat" />
+    <title>CookieChat Familia</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+    <link rel="apple-touch-icon" href="./icons/icon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <h1>CookieChat Familia</h1>
+        <p>Chat privado solo para miembros autorizados</p>
+      </header>
+
+      <section id="status" class="status" aria-live="polite"></section>
+
+      <section id="auth-card" class="card">
+        <h2>Entrar</h2>
+        <div class="auth-modes">
+          <button id="mode-login" class="secondary" type="button">Entrar</button>
+          <button id="mode-register" class="secondary" type="button">Registrarse</button>
+        </div>
+        <form id="login-form" class="stack">
+          <label id="display-name-label" class="hidden">
+            Nombre
+            <input id="display-name" type="text" maxlength="40" autocomplete="name" />
+          </label>
+          <label>
+            Email
+            <input id="email" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            Contrasena
+            <input id="password" type="password" autocomplete="current-password" required minlength="8" />
+          </label>
+          <label id="requested-role-label" class="hidden">
+            Tipo de usuario
+            <select id="requested-role">
+              <option value="adult">Adulto</option>
+              <option value="child">Menor</option>
+            </select>
+          </label>
+          <button id="auth-submit" type="submit">Entrar</button>
+        </form>
+      </section>
+
+      <section id="pending-card" class="card hidden">
+        <h2>Solicitud enviada</h2>
+        <p id="pending-message">
+          Tu solicitud esta pendiente de aprobacion por un administrador de la familia.
+        </p>
+        <button id="pending-logout-btn" class="secondary" type="button">Salir</button>
+      </section>
+
+      <section id="chat-card" class="card hidden">
+        <div class="chat-topbar">
+          <h2>Chat familiar</h2>
+          <button id="logout-btn" class="secondary" type="button">Salir</button>
+        </div>
+        <section id="admin-panel" class="admin-panel hidden">
+          <h3>Solicitudes de acceso</h3>
+          <ul id="join-requests" class="requests"></ul>
+        </section>
+        <ul id="messages" class="messages" aria-live="polite"></ul>
+        <form id="composer" class="composer">
+          <input id="draft" type="text" maxlength="1000" placeholder="Escribe un mensaje..." required />
+          <button type="submit">Enviar</button>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

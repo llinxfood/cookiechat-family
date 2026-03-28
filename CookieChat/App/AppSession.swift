@@ -11,7 +11,15 @@ final class AppSession: ObservableObject {
         return family?.role(for: userId)
     }
 
+    #if DEBUG
+    var isDemoAuthEnabled: Bool { true }
+    #else
+    var isDemoAuthEnabled: Bool { false }
+    #endif
+
     func signInDemo(as role: UserRole) {
+        guard isDemoAuthEnabled else { return }
+
         let idsByRole: [UserRole: String] = [
             .admin: "uid_mama",
             .adult: "uid_abuela",

@@ -8,23 +8,29 @@ struct SignInView: View {
             Text("CookieChat")
                 .font(.largeTitle)
                 .bold()
-            Text("Demo de acceso por rol")
-                .foregroundStyle(.secondary)
+            if session.isDemoAuthEnabled {
+                Text("Demo de acceso por rol (solo DEBUG)")
+                    .foregroundStyle(.secondary)
 
-            Button("Entrar como Madre (admin)") {
-                session.signInDemo(as: .admin)
-            }
-            .buttonStyle(.borderedProminent)
+                Button("Entrar como Madre (admin)") {
+                    session.signInDemo(as: .admin)
+                }
+                .buttonStyle(.borderedProminent)
 
-            Button("Entrar como Abuela (adult)") {
-                session.signInDemo(as: .adult)
-            }
-            .buttonStyle(.bordered)
+                Button("Entrar como Abuela (adult)") {
+                    session.signInDemo(as: .adult)
+                }
+                .buttonStyle(.bordered)
 
-            Button("Entrar como Hija (child)") {
-                session.signInDemo(as: .child)
+                Button("Entrar como Hija (child)") {
+                    session.signInDemo(as: .child)
+                }
+                .buttonStyle(.bordered)
+            } else {
+                Text("Acceso en produccion: requiere Firebase Auth + Firestore Rules desplegadas.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.bordered)
         }
         .padding()
     }

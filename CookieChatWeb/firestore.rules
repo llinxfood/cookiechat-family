@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function familyDoc(familyId) {
+      return get(/databases/$(database)/documents/families/$(familyId));
+    }
+
+    function isFamilyMember(familyId) {
+      return isSignedIn() && familyDoc(familyId).data.members[request.auth.uid] != null;
+    }
+
+    function isFamilyAdmin(familyId) {
+      return isFamilyMember(familyId) && familyDoc(familyId).data.admins[request.auth.uid] == true;
+    }
+
+    match /families/{familyId} {
+      allow read: if isFamilyMember(familyId);
+      allow create: if false;
+      allow delete: if false;
+      allow update: if isFamilyAdmin(familyId);
+
+      match /rooms/{roomId} {
+        allow read: if isFamilyMember(familyId);
+        allow create: if false;
+        allow delete: if false;
+        allow update: if isFamilyAdmin(familyId);
+
+        match /messages/{messageId} {
+          allow read: if isFamilyMember(familyId);
+          allow create: if isFamilyMember(familyId)
+            && request.resource.data.senderId == request.auth.uid
+            && request.resource.data.senderRole in ['admin', 'adult', 'child']
+            && familyDoc(familyId).data.members[request.auth.uid] == request.resource.data.senderRole
+            && request.resource.data.type == 'text'
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 1000
+            && request.resource.data.createdAt is timestamp;
+          allow update: if false;
+          allow delete: if false;
+        }
+      }
+
+      match /joinRequests/{requestUserId} {
+        // Admins pueden ver y gestionar todas las solicitudes.
+        allow read: if isFamilyAdmin(familyId) || (isSignedIn() && request.auth.uid == requestUserId);
+        allow update: if isFamilyAdmin(familyId);
+        allow delete: if isFamilyAdmin(familyId);
+
+        // Un usuario autenticado puede crear/actualizar su propia solicitud
+        // mientras no sea miembro y con formato controlado.
+        allow create: if isSignedIn()
+          && request.auth.uid == requestUserId
+          && !isFamilyMember(familyId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.email is string
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() > 0
+          && request.resource.data.displayName.size() <= 40
+          && request.resource.data.requestedRole in ['adult', 'child']
+          && request.resource.data.status == 'pending'
+          && request.resource.data.requestedAt is timestamp;
+
+        allow update: if isSignedIn()
+          && request.auth.uid == requestUserId
+          && !isFamilyMember(familyId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() > 0
+          && request.resource.data.displayName.size() <= 40
+          && request.resource.data.requestedRole in ['adult', 'child']
+          && request.resource.data.status == 'pending';
+      }
+    }
+  }
+}

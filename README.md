@@ -11,5 +11,7 @@ Scaffold de `CookieChat` para iPad con chat familiar cerrado (`family_main`).
 
 ## Carpeta principal de codigo
 
-- [CookieChat/App/CookieChatApp.swift](/Users/maria/Documents/New%20project/cookiechat-family/CookieChat/App/CookieChatApp.swift)
-- [CookieChat/Setup/Xcode-setup.md](/Users/maria/Documents/New%20project/cookiechat-family/CookieChat/Setup/Xcode-setup.md)
+- [CookieChat/App/CookieChatApp.swift](CookieChat/App/CookieChatApp.swift)
+- [CookieChat/Setup/Xcode-setup.md](CookieChat/Setup/Xcode-setup.md)
+- [CookieChat/Setup/firestore.rules](CookieChat/Setup/firestore.rules)
+- [CookieChatWeb/README.md](CookieChatWeb/README.md)

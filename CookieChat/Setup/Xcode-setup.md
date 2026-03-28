@@ -27,10 +27,17 @@
 - Incluye `GoogleService-Info.plist`.
 - Inicializa Firebase en `CookieChatApp` (por ejemplo con `FirebaseApp.configure()`).
 - En `RootView`, cambia el repositorio de `MockChatRepository()` a `FirestoreChatRepository(familyId: "tu_family_id")`.
+- Despliega reglas de seguridad con el archivo `CookieChat/Setup/firestore.rules`.
+  - Ejemplo CLI: `firebase deploy --only firestore:rules`.
 
 ## 5) Validacion minima
 
 - Cuenta child puede leer/enviar en `family_main`.
 - Cuenta child no puede gestionar miembros.
 - No existe UI para crear otros chats.
-- Firestore Rules del MVP estan desplegadas.
+- Firestore Rules de `CookieChat/Setup/firestore.rules` estan desplegadas.
+
+## 6) Seguridad para produccion
+
+- El login demo por rol es solo para `DEBUG`.
+- En `Release`, la app no permite acceso demo; debes integrar `FirebaseAuth` y recuperar la familia del usuario autenticado.

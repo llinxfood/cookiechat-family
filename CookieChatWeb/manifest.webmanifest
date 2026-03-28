@@ -1,0 +1,9 @@
+{
+  "name": "CookieChat Familia",
+  "short_name": "CookieChat",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#1f6feb",
+  "description": "Chat privado familiar"
+}
