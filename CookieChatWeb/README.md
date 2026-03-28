@@ -5,7 +5,7 @@ This version runs on iPad, Mac, Android, and PC without publishing to the App St
 ## 0) Get the code
 
 ```bash
-git clone git@github.com:llinxfood/cookiechat-family.git
+git clone git@github.com:<your-github-user>/cookiechat-family.git
 cd cookiechat-family
 ```
 

@@ -36,7 +36,7 @@ It is designed for small trusted groups with an approval-based onboarding flow a
 ### 1) Clone the repository
 
 ```bash
-git clone git@github.com:llinxfood/cookiechat-family.git
+git clone git@github.com:<your-github-user>/cookiechat-family.git
 cd cookiechat-family
 ```
 
@@ -181,10 +181,10 @@ When enabled, every new `joinRequests` document triggers an email to admins.
 ### 1) Configure SMTP
 
 ```bash
-cp functions/.env.example functions/.env.cookiechat-1b1e9
+cp functions/.env.example functions/.env.<your-firebase-project-id>
 ```
 
-Edit `functions/.env.cookiechat-1b1e9`:
+Edit `functions/.env.<your-firebase-project-id>`:
 
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
 - `SMTP_USER`, `SMTP_PASS`
