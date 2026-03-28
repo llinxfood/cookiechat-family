@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   sendEmailVerification,
-  reload
+  reload,
+  updateProfile
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   getFirestore,
@@ -62,6 +63,7 @@ const joinRequestsEl = document.querySelector("#join-requests");
 
 let currentUserRole = null;
 let currentUserId = null;
+let currentUserName = "Usuario";
 let currentUserIsAdmin = false;
 let authMode = "login";
 let unsubscribeMessages = null;
@@ -73,6 +75,32 @@ const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️"
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function roleLabel(role) {
+  switch (role) {
+    case "admin":
+      return "admin";
+    case "adult":
+      return "adulto";
+    case "child":
+      return "menor";
+    default:
+      return "miembro";
+  }
+}
+
+function inferDisplayName(user) {
+  const authName = user?.displayName?.trim();
+  if (authName) return authName;
+
+  const email = user?.email || "";
+  const emailName = email.split("@")[0]?.trim();
+  if (emailName) {
+    return emailName.charAt(0).toUpperCase() + emailName.slice(1);
+  }
+
+  return "Usuario";
 }
 
 function isIOS() {
@@ -212,7 +240,10 @@ function renderMessages(docs) {
 
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = `${message.senderRole || "member"} · ${message.senderId || "uid"} · ${formatDate(message.createdAt)}`;
+    const senderName =
+      message.senderName ||
+      (message.senderId && message.senderId === currentUserId ? currentUserName : "Usuario");
+    meta.textContent = `${roleLabel(message.senderRole)} · ${senderName} · ${formatDate(message.createdAt)}`;
 
     const text = document.createElement("p");
     text.textContent = message.text || "";
@@ -286,7 +317,7 @@ function renderJoinRequests(snapshot) {
 
     const meta = document.createElement("p");
     meta.className = "request-meta";
-    meta.textContent = `${displayName} · ${email} · pide rol ${requestedRole}`;
+    meta.textContent = `${displayName} · ${email} · solicita rol ${roleLabel(requestedRole)}`;
 
     const actions = document.createElement("div");
     actions.className = "request-actions";
@@ -412,6 +443,7 @@ async function handleAuthSubmit(event) {
     authSubmitBtn.textContent = "Creando...";
     setStatus("Creando cuenta...");
     const credential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(credential.user, { displayName }).catch(() => {});
     authSubmitBtn.textContent = "Enviando solicitud...";
     await createJoinRequest(credential.user, displayName, requestedRole);
     await sendEmailVerification(credential.user).catch(() => {});
@@ -454,6 +486,7 @@ async function handleSend(event) {
     const messagesRef = collection(db, "families", familyId, "rooms", roomId, "messages");
     await addDoc(messagesRef, {
       senderId: auth.currentUser.uid,
+      senderName: currentUserName,
       senderRole: currentUserRole,
       text,
       type: "text",
@@ -525,6 +558,7 @@ onAuthStateChanged(auth, async (user) => {
   if (!user) {
     currentUserRole = null;
     currentUserId = null;
+    currentUserName = "Usuario";
     currentUserIsAdmin = false;
     adminPanel.classList.add("hidden");
     setView("auth");
@@ -534,6 +568,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUserId = user.uid;
+  currentUserName = inferDisplayName(user);
 
   try {
     setStatus("Validando acceso...");
