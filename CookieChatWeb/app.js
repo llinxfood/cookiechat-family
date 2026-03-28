@@ -67,6 +67,24 @@ const pendingBadgeEl = document.querySelector("#pending-badge");
 const notifEnableBtn = document.querySelector("#notif-enable-btn");
 const languageSelectEl = document.querySelector("#language-select");
 const privacyPillEl = document.querySelector("#privacy-pill");
+const quickTemplatesCardEl = document.querySelector("#quick-templates-card");
+const quickTemplatesTitleEl = document.querySelector("#quick-templates-title");
+const quickTemplatesSubtitleEl = document.querySelector("#quick-templates-subtitle");
+const quickTemplateCategoriesEl = document.querySelector("#quick-template-categories");
+const quickTemplateListEl = document.querySelector("#quick-template-list");
+const templateAdminPanelEl = document.querySelector("#template-admin-panel");
+const templateAdminTitleEl = document.querySelector("#template-admin-title");
+const templateFormEl = document.querySelector("#template-form");
+const templateIdEl = document.querySelector("#template-id");
+const templateTitleInputEl = document.querySelector("#template-title-input");
+const templateTextInputEl = document.querySelector("#template-text-input");
+const templateCategoryInputEl = document.querySelector("#template-category-input");
+const templateOrderInputEl = document.querySelector("#template-order-input");
+const templateEditableInputEl = document.querySelector("#template-editable-input");
+const templateActiveInputEl = document.querySelector("#template-active-input");
+const templateSaveBtnEl = document.querySelector("#template-save-btn");
+const templateResetBtnEl = document.querySelector("#template-reset-btn");
+const templateAdminListEl = document.querySelector("#template-admin-list");
 
 let currentUserRole = null;
 let currentUserId = null;
@@ -85,12 +103,23 @@ let latestMessageDocs = [];
 let missingE2EEKeyNoticeShown = false;
 let lastPendingCount = null;
 let currentLang = "es";
+let unsubscribeTemplates = null;
+let templates = [];
+let selectedTemplateCategory = "morning";
+let hasSeededTemplates = false;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 const E2EE_PREFIX = "e2ee:v1:";
 const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
 const MAX_STORED_TEXT_LENGTH = 1000;
 const LANG_STORAGE_KEY = "cookiechat.lang";
 const SUPPORTED_LANGS = ["es", "en", "fr", "de", "it", "pt"];
+const TEMPLATE_CATEGORIES = ["morning", "school", "love", "night"];
+const TEMPLATE_DEFAULTS = [
+  { title: "Buenos dias, abuelos ☀️", text: "Buenos dias, abuelos. Que tengais un dia precioso ❤️", category: "morning", sortOrder: 10, editable: false },
+  { title: "Os quiero mucho ❤️", text: "Os quiero mucho. Luego os cuento mas 😘", category: "love", sortOrder: 20, editable: false },
+  { title: "Hoy en el cole...", text: "Hoy en el cole hice [actividad] y me gusto mucho.", category: "school", sortOrder: 30, editable: true },
+  { title: "Buenas noches 🌙", text: "Buenas noches, abuelos. Que descanseis.", category: "night", sortOrder: 40, editable: false }
+];
 
 const I18N = {
   es: {
@@ -249,6 +278,38 @@ function t(path, fallback = "") {
   return typeof fallbackValue === "string" ? fallbackValue : path;
 }
 
+function categoryLabel(category) {
+  const isEs = currentLang === "es";
+  if (category === "morning") return isEs ? "Manana" : "Morning";
+  if (category === "school") return isEs ? "Cole" : "School";
+  if (category === "love") return isEs ? "Carino" : "Love";
+  if (category === "night") return isEs ? "Noche" : "Night";
+  return isEs ? "General" : "General";
+}
+
+function cleanTemplatePayload(raw) {
+  const title = String(raw?.title || "").trim().slice(0, 40);
+  const text = String(raw?.text || "").trim().slice(0, 240);
+  const category = TEMPLATE_CATEGORIES.includes(raw?.category) ? raw.category : "morning";
+  const editable = raw?.editable !== false;
+  const active = raw?.active !== false;
+  const sortOrder = Number.isFinite(Number(raw?.sortOrder)) ? Math.max(0, Math.min(999, Math.round(Number(raw.sortOrder)))) : 100;
+
+  return {
+    title,
+    text,
+    category,
+    editable,
+    active,
+    sortOrder
+  };
+}
+
+function makeTemplateId() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return `tpl_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+}
+
 function applyStaticTranslations() {
   const setLabelPrefix = (labelEl, text) => {
     if (!labelEl) return;
@@ -292,6 +353,25 @@ function applyStaticTranslations() {
   notifEnableBtn.textContent = t("chat.notify");
   draftEl.placeholder = t("chat.draft");
   if (composer.querySelector('button[type="submit"]')) composer.querySelector('button[type="submit"]').textContent = t("chat.send");
+  if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Mensajes rapidos" : "Quick messages";
+  if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Envia un mensaje carinoso en dos toques." : "Send a caring message in two taps.";
+  if (templateAdminTitleEl) templateAdminTitleEl.textContent = currentLang === "es" ? "Gestionar plantillas" : "Manage templates";
+  if (templateSaveBtnEl) templateSaveBtnEl.textContent = currentLang === "es" ? "Guardar plantilla" : "Save template";
+  if (templateResetBtnEl) templateResetBtnEl.textContent = currentLang === "es" ? "Nueva" : "New";
+
+  if (templateCategoryInputEl && templateCategoryInputEl.options.length === 0) {
+    for (const category of TEMPLATE_CATEGORIES) {
+      const option = document.createElement("option");
+      option.value = category;
+      templateCategoryInputEl.appendChild(option);
+    }
+  }
+  if (templateCategoryInputEl) {
+    for (let i = 0; i < templateCategoryInputEl.options.length; i += 1) {
+      const option = templateCategoryInputEl.options[i];
+      option.textContent = categoryLabel(option.value);
+    }
+  }
 }
 
 function setLanguage(lang) {
@@ -307,6 +387,11 @@ function setLanguage(lang) {
   if (currentUserIsAdmin && lastPendingCount !== null) {
     adminPanelTitleEl.textContent = `${t("chat.requests")} (${lastPendingCount})`;
     updatePendingBadge(lastPendingCount);
+  }
+  renderTemplateCategories();
+  renderQuickTemplateButtons();
+  if (currentUserIsAdmin) {
+    renderTemplateAdminList();
   }
 }
 
@@ -651,6 +736,254 @@ function renderEmojiBar() {
   }
 }
 
+async function sendTextMessage(text) {
+  const safeText = String(text || "").trim();
+  if (!safeText || !auth.currentUser || !currentUserRole) return;
+
+  const storedText = await encryptText(safeText);
+  if (storedText.length > MAX_STORED_TEXT_LENGTH) {
+    throw new Error(currentLang === "es" ? "Mensaje demasiado largo para enviarlo cifrado. Acortalo un poco." : "Message too long for encrypted send.");
+  }
+
+  const messagesRef = collection(db, "families", familyId, "rooms", roomId, "messages");
+  await addDoc(messagesRef, {
+    senderId: auth.currentUser.uid,
+    senderName: currentUserName,
+    senderRole: currentUserRole,
+    text: storedText,
+    type: "text",
+    createdAt: serverTimestamp()
+  });
+}
+
+function renderTemplateCategories() {
+  if (!quickTemplateCategoriesEl) return;
+  quickTemplateCategoriesEl.innerHTML = "";
+  for (const category of TEMPLATE_CATEGORIES) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = selectedTemplateCategory === category ? "active" : "";
+    btn.textContent = categoryLabel(category);
+    btn.addEventListener("click", () => {
+      selectedTemplateCategory = category;
+      renderTemplateCategories();
+      renderQuickTemplateButtons();
+    });
+    quickTemplateCategoriesEl.appendChild(btn);
+  }
+}
+
+async function handleQuickTemplateClick(template) {
+  let finalText = template.text;
+
+  if (template.editable) {
+    const edited = window.prompt(
+      currentLang === "es" ? "Edita el mensaje antes de enviar:" : "Edit message before sending:",
+      template.text
+    );
+    if (edited === null) return;
+    finalText = String(edited || "").trim();
+  }
+
+  if (!finalText) {
+    setStatus(currentLang === "es" ? "El mensaje esta vacio." : "Message is empty.", true);
+    return;
+  }
+
+  try {
+    await sendTextMessage(finalText);
+    setStatus(currentLang === "es" ? "Mensaje rapido enviado." : "Quick message sent.");
+  } catch (error) {
+    setStatus(currentLang === "es" ? `No se pudo enviar: ${error.message}` : `Could not send: ${error.message}`, true);
+  }
+}
+
+function renderQuickTemplateButtons() {
+  if (!quickTemplateListEl) return;
+  quickTemplateListEl.innerHTML = "";
+
+  const visible = templates
+    .filter((tpl) => tpl.active && tpl.category === selectedTemplateCategory)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
+
+  if (!visible.length) {
+    const empty = document.createElement("div");
+    empty.className = "template-admin-meta";
+    empty.textContent = currentLang === "es" ? "No hay plantillas en esta categoria." : "No templates in this category.";
+    quickTemplateListEl.appendChild(empty);
+    return;
+  }
+
+  for (const template of visible) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "quick-template-btn";
+    btn.textContent = template.title;
+    const meta = document.createElement("span");
+    meta.className = "quick-template-meta";
+    meta.textContent = template.editable ? (currentLang === "es" ? "Editable" : "Editable") : (currentLang === "es" ? "Un toque" : "One tap");
+    btn.appendChild(meta);
+    btn.addEventListener("click", async () => {
+      await handleQuickTemplateClick(template);
+    });
+    quickTemplateListEl.appendChild(btn);
+  }
+}
+
+function resetTemplateForm() {
+  if (!templateFormEl) return;
+  templateIdEl.value = "";
+  templateTitleInputEl.value = "";
+  templateTextInputEl.value = "";
+  templateCategoryInputEl.value = selectedTemplateCategory;
+  templateOrderInputEl.value = "100";
+  templateEditableInputEl.checked = true;
+  templateActiveInputEl.checked = true;
+}
+
+function fillTemplateForm(template) {
+  templateIdEl.value = template.id;
+  templateTitleInputEl.value = template.title;
+  templateTextInputEl.value = template.text;
+  templateCategoryInputEl.value = template.category;
+  templateOrderInputEl.value = String(template.sortOrder);
+  templateEditableInputEl.checked = template.editable;
+  templateActiveInputEl.checked = template.active;
+}
+
+function renderTemplateAdminList() {
+  if (!templateAdminListEl) return;
+  templateAdminListEl.innerHTML = "";
+
+  const ordered = [...templates].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title));
+  if (!ordered.length) {
+    const empty = document.createElement("li");
+    empty.textContent = currentLang === "es" ? "Todavia no hay plantillas." : "No templates yet.";
+    templateAdminListEl.appendChild(empty);
+    return;
+  }
+
+  for (const template of ordered) {
+    const li = document.createElement("li");
+    const meta = document.createElement("p");
+    meta.className = "template-admin-meta";
+    meta.textContent = `${template.title} · ${categoryLabel(template.category)} · ${template.active ? "ON" : "OFF"} · ${template.editable ? (currentLang === "es" ? "editable" : "editable") : (currentLang === "es" ? "fija" : "fixed")}`;
+
+    const actions = document.createElement("div");
+    actions.className = "request-actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.textContent = currentLang === "es" ? "Editar" : "Edit";
+    editBtn.addEventListener("click", () => fillTemplateForm(template));
+
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.className = "secondary";
+    toggleBtn.textContent = template.active ? (currentLang === "es" ? "Desactivar" : "Disable") : (currentLang === "es" ? "Activar" : "Enable");
+    toggleBtn.addEventListener("click", async () => {
+      try {
+        await setDoc(
+          doc(db, "families", familyId, "templates", template.id),
+          { active: !template.active, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      } catch (error) {
+        setStatus(currentLang === "es" ? `No se pudo actualizar plantilla: ${error.message}` : `Could not update template: ${error.message}`, true);
+      }
+    });
+
+    actions.appendChild(editBtn);
+    actions.appendChild(toggleBtn);
+    li.appendChild(meta);
+    li.appendChild(actions);
+    templateAdminListEl.appendChild(li);
+  }
+}
+
+async function saveTemplateFromForm(event) {
+  event.preventDefault();
+  if (!currentUserIsAdmin) return;
+
+  const payload = cleanTemplatePayload({
+    title: templateTitleInputEl.value,
+    text: templateTextInputEl.value,
+    category: templateCategoryInputEl.value,
+    editable: templateEditableInputEl.checked,
+    active: templateActiveInputEl.checked,
+    sortOrder: Number(templateOrderInputEl.value || 100)
+  });
+
+  if (!payload.title || !payload.text) {
+    setStatus(currentLang === "es" ? "Completa titulo y mensaje." : "Fill title and message.", true);
+    return;
+  }
+
+  const id = templateIdEl.value || makeTemplateId();
+  try {
+    await setDoc(
+      doc(db, "families", familyId, "templates", id),
+      {
+        ...payload,
+        createdBy: currentUserId || "",
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+    resetTemplateForm();
+    setStatus(currentLang === "es" ? "Plantilla guardada." : "Template saved.");
+  } catch (error) {
+    setStatus(currentLang === "es" ? `No se pudo guardar plantilla: ${error.message}` : `Could not save template: ${error.message}`, true);
+  }
+}
+
+async function ensureDefaultTemplatesIfNeeded() {
+  if (!currentUserIsAdmin || hasSeededTemplates || templates.length > 0) return;
+  hasSeededTemplates = true;
+  try {
+    for (const tpl of TEMPLATE_DEFAULTS) {
+      await setDoc(
+        doc(db, "families", familyId, "templates", makeTemplateId()),
+        {
+          ...tpl,
+          active: true,
+          createdBy: currentUserId || "",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }
+      );
+    }
+    setStatus(currentLang === "es" ? "Plantillas base creadas." : "Starter templates created.");
+  } catch {
+    // no-op
+  }
+}
+
+function watchTemplates() {
+  if (unsubscribeTemplates) {
+    unsubscribeTemplates();
+    unsubscribeTemplates = null;
+  }
+
+  const templatesRef = collection(db, "families", familyId, "templates");
+  unsubscribeTemplates = onSnapshot(
+    templatesRef,
+    async (snapshot) => {
+      templates = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...cleanTemplatePayload(docSnap.data()) }));
+      renderTemplateCategories();
+      renderQuickTemplateButtons();
+      if (currentUserIsAdmin) {
+        renderTemplateAdminList();
+      }
+      await ensureDefaultTemplatesIfNeeded();
+    },
+    (error) => {
+      setStatus(currentLang === "es" ? `Error cargando plantillas: ${error.message}` : `Error loading templates: ${error.message}`, true);
+    }
+  );
+}
+
 async function renderMessages(docs) {
   latestMessageDocs = docs;
   messagesEl.innerHTML = "";
@@ -959,21 +1292,7 @@ async function handleSend(event) {
   if (!text || !auth.currentUser || !currentUserRole) return;
 
   try {
-    const storedText = await encryptText(text);
-    if (storedText.length > MAX_STORED_TEXT_LENGTH) {
-      setStatus(currentLang === "es" ? "Mensaje demasiado largo para enviarlo cifrado. Acortalo un poco." : "Message too long to send encrypted. Shorten it a bit.", true);
-      return;
-    }
-
-    const messagesRef = collection(db, "families", familyId, "rooms", roomId, "messages");
-    await addDoc(messagesRef, {
-      senderId: auth.currentUser.uid,
-      senderName: currentUserName,
-      senderRole: currentUserRole,
-      text: storedText,
-      type: "text",
-      createdAt: serverTimestamp()
-    });
+    await sendTextMessage(text);
     draftEl.value = "";
   } catch (error) {
     setStatus(currentLang === "es" ? `No se pudo enviar: ${error.message}` : `Could not send: ${error.message}`, true);
@@ -1084,6 +1403,14 @@ notifEnableBtn.addEventListener("click", async () => {
     setStatus(currentLang === "es" ? `No se pudieron activar avisos: ${error.message}` : `Could not enable alerts: ${error.message}`, true);
   }
 });
+if (templateFormEl) {
+  templateFormEl.addEventListener("submit", saveTemplateFromForm);
+}
+if (templateResetBtnEl) {
+  templateResetBtnEl.addEventListener("click", () => {
+    resetTemplateForm();
+  });
+}
 
 onAuthStateChanged(auth, async (user) => {
   if (unsubscribeMessages) {
@@ -1093,6 +1420,10 @@ onAuthStateChanged(auth, async (user) => {
   if (unsubscribeRequests) {
     unsubscribeRequests();
     unsubscribeRequests = null;
+  }
+  if (unsubscribeTemplates) {
+    unsubscribeTemplates();
+    unsubscribeTemplates = null;
   }
 
   if (!user) {
@@ -1105,8 +1436,11 @@ onAuthStateChanged(auth, async (user) => {
     latestMessageDocs = [];
     missingE2EEKeyNoticeShown = false;
     lastPendingCount = null;
+    templates = [];
+    hasSeededTemplates = false;
     refreshE2EEIndicator();
     adminPanel.classList.add("hidden");
+    templateAdminPanelEl.classList.add("hidden");
     setView("auth");
     setStatus("");
     verifyEmailBtn.classList.add("hidden");
@@ -1135,12 +1469,16 @@ onAuthStateChanged(auth, async (user) => {
     setView("chat");
     setStatus(currentLang === "es" ? "Conectada." : "Connected.");
     watchMessages();
+    watchTemplates();
 
     if (currentUserIsAdmin) {
       adminPanel.classList.remove("hidden");
+      templateAdminPanelEl.classList.remove("hidden");
       watchJoinRequests();
+      resetTemplateForm();
     } else {
       adminPanel.classList.add("hidden");
+      templateAdminPanelEl.classList.add("hidden");
     }
     return;
   } catch {

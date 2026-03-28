@@ -318,6 +318,7 @@ label {
 }
 
 input,
+textarea,
 select {
   width: 100%;
   border: 1px solid rgba(23, 75, 150, 0.25);
@@ -329,10 +330,16 @@ select {
 }
 
 input:focus,
+textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.18);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 86px;
 }
 
 button {
@@ -409,6 +416,98 @@ button.secondary {
   border-radius: 14px;
   padding: 10px;
   background: rgba(245, 249, 255, 0.95);
+}
+
+.card-soft {
+  margin: 10px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(245, 249, 255, 0.95);
+}
+
+.quick-templates-head h3 {
+  margin: 2px 0 4px;
+  font-size: 1rem;
+}
+
+.quick-templates-head p {
+  margin: 0 0 10px;
+  color: #35537f;
+  font-size: 0.9rem;
+}
+
+.quick-template-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.quick-template-categories button {
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: rgba(233, 238, 249, 0.95);
+  color: #26426d;
+}
+
+.quick-template-categories button.active {
+  background: linear-gradient(180deg, #2f84ff 0%, var(--accent) 80%);
+  color: #fff;
+}
+
+.quick-template-list {
+  display: grid;
+  gap: 8px;
+}
+
+.quick-template-btn {
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(32, 76, 150, 0.2);
+  background: #fff;
+  color: #223860;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.quick-template-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #4d6791;
+  font-weight: 600;
+}
+
+.template-form-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.template-form-grid.checks {
+  grid-template-columns: 1fr 1fr;
+}
+
+.check-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-form-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.template-admin-meta {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: #233556;
 }
 
 .admin-panel h3 {
@@ -648,5 +747,10 @@ button.secondary {
   .chat-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .template-form-grid,
+  .template-form-grid.checks {
+    grid-template-columns: 1fr;
   }
 }

@@ -129,6 +129,49 @@
           </div>
           <ul id="join-requests" class="requests"></ul>
         </section>
+        <section id="quick-templates-card" class="quick-templates card-soft">
+          <div class="quick-templates-head">
+            <h3 id="quick-templates-title">Mensajes rapidos</h3>
+            <p id="quick-templates-subtitle">Envia un mensaje carinoso en dos toques.</p>
+          </div>
+          <div id="quick-template-categories" class="quick-template-categories"></div>
+          <div id="quick-template-list" class="quick-template-list"></div>
+        </section>
+        <section id="template-admin-panel" class="admin-panel hidden">
+          <div class="admin-panel-head">
+            <h3 id="template-admin-title">Gestionar plantillas</h3>
+          </div>
+          <form id="template-form" class="stack template-form">
+            <input id="template-id" type="hidden" />
+            <label>
+              Titulo
+              <input id="template-title-input" type="text" maxlength="40" required />
+            </label>
+            <label>
+              Mensaje
+              <textarea id="template-text-input" rows="3" maxlength="240" required></textarea>
+            </label>
+            <div class="template-form-grid">
+              <label>
+                Categoria
+                <select id="template-category-input"></select>
+              </label>
+              <label>
+                Orden
+                <input id="template-order-input" type="number" min="0" max="999" value="100" />
+              </label>
+            </div>
+            <div class="template-form-grid checks">
+              <label class="check-line"><input id="template-editable-input" type="checkbox" checked /> Editable</label>
+              <label class="check-line"><input id="template-active-input" type="checkbox" checked /> Activa</label>
+            </div>
+            <div class="template-form-actions">
+              <button id="template-save-btn" type="submit">Guardar plantilla</button>
+              <button id="template-reset-btn" class="secondary" type="button">Nueva</button>
+            </div>
+          </form>
+          <ul id="template-admin-list" class="requests"></ul>
+        </section>
         <ul id="messages" class="messages" aria-live="polite"></ul>
         <form id="composer" class="composer">
           <div id="emoji-bar" class="emoji-bar hidden" aria-label="Emojis frecuentes"></div>

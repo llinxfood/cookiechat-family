@@ -84,6 +84,25 @@ service cloud.firestore {
           && isValidRequestedRole(request.resource.data.requestedRole)
           && request.resource.data.status == 'pending';
       }
+
+      match /templates/{templateId} {
+        allow read: if isFamilyMember(familyId);
+        allow create, update: if isFamilyAdmin(familyId)
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 40
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 240
+          && request.resource.data.category in ['morning', 'school', 'love', 'night']
+          && request.resource.data.active is bool
+          && request.resource.data.editable is bool
+          && request.resource.data.sortOrder is int
+          && request.resource.data.sortOrder >= 0
+          && request.resource.data.sortOrder <= 999
+          && request.resource.data.createdBy is string;
+        allow delete: if isFamilyAdmin(familyId);
+      }
     }
   }
 }
