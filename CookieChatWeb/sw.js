@@ -1,4 +1,4 @@
-const CACHE_NAME = "cookiechat-v7";
+const CACHE_NAME = "cookiechat-v8";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,10 +6,10 @@ const ASSETS = [
   "./app.js",
   "./manifest.webmanifest",
   "./config/firebase-config.js",
-  "./icons/icon-192-v2.png",
-  "./icons/icon-512-v2.png",
-  "./icons/apple-touch-icon-v2.png",
-  "./icons/favicon-32-v2.png",
+  "./icons/icon-192-v3.png",
+  "./icons/icon-512-v3.png",
+  "./icons/apple-touch-icon-v3.png",
+  "./icons/favicon-32-v3.png",
   "./icons/logo-wordmark-v2.png"
 ];
 
