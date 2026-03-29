@@ -144,26 +144,26 @@
             <form id="template-form" class="stack template-form">
               <input id="template-id" type="hidden" />
               <label>
-                Titulo
+                <span id="template-title-label">Titulo</span>
                 <input id="template-title-input" type="text" maxlength="40" required />
               </label>
               <label>
-                Mensaje
+                <span id="template-text-label">Mensaje</span>
                 <textarea id="template-text-input" rows="3" maxlength="240" required></textarea>
               </label>
               <div class="template-form-grid">
                 <label>
-                  Categoria
+                  <span id="template-category-label">Categoria</span>
                   <select id="template-category-input"></select>
                 </label>
                 <label>
-                  Orden
+                  <span id="template-order-label">Orden</span>
                   <input id="template-order-input" type="number" min="0" max="999" value="100" />
                 </label>
               </div>
               <div class="template-form-grid checks">
-                <label class="check-line"><input id="template-editable-input" type="checkbox" checked /> Editable</label>
-                <label class="check-line"><input id="template-active-input" type="checkbox" checked /> Activa</label>
+                <label class="check-line"><input id="template-editable-input" type="checkbox" checked /> <span id="template-editable-label">Editable</span></label>
+                <label class="check-line"><input id="template-active-input" type="checkbox" checked /> <span id="template-active-label">Activa</span></label>
               </div>
               <div class="template-form-actions">
                 <button id="template-save-btn" type="submit">Guardar plantilla</button>

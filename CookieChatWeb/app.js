@@ -91,6 +91,12 @@ const templateCategoryInputEl = document.querySelector("#template-category-input
 const templateOrderInputEl = document.querySelector("#template-order-input");
 const templateEditableInputEl = document.querySelector("#template-editable-input");
 const templateActiveInputEl = document.querySelector("#template-active-input");
+const templateTitleLabelEl = document.querySelector("#template-title-label");
+const templateTextLabelEl = document.querySelector("#template-text-label");
+const templateCategoryLabelEl = document.querySelector("#template-category-label");
+const templateOrderLabelEl = document.querySelector("#template-order-label");
+const templateEditableLabelEl = document.querySelector("#template-editable-label");
+const templateActiveLabelEl = document.querySelector("#template-active-label");
 const templateSaveBtnEl = document.querySelector("#template-save-btn");
 const templateResetBtnEl = document.querySelector("#template-reset-btn");
 const templateAdminListEl = document.querySelector("#template-admin-list");
@@ -187,6 +193,18 @@ const I18N = {
       draft: "Escribe un mensaje...",
       send: "Enviar"
     },
+    templates: {
+      manage: "Gestionar plantillas",
+      add: "+ Plantilla",
+      save: "Guardar plantilla",
+      reset: "Nueva",
+      title: "Titulo",
+      message: "Mensaje",
+      category: "Categoria",
+      order: "Orden",
+      editable: "Editable",
+      active: "Activa"
+    },
     roles: { admin: "admin", adult: "adulto", child: "menor", member: "miembro" }
   },
   en: {
@@ -236,6 +254,18 @@ const I18N = {
       draft: "Write a message...",
       send: "Send"
     },
+    templates: {
+      manage: "Manage templates",
+      add: "+ Template",
+      save: "Save template",
+      reset: "New",
+      title: "Title",
+      message: "Message",
+      category: "Category",
+      order: "Order",
+      editable: "Editable",
+      active: "Active"
+    },
     roles: { admin: "admin", adult: "adult", child: "child", member: "member" }
   },
   fr: {
@@ -246,6 +276,7 @@ const I18N = {
     auth: { access: "Acces", newUser: "Nouvel utilisateur", sendRequest: "Envoyer la demande", continue: "Continuer", name: "Nom", email: "Email", password: "Mot de passe", userType: "Type d'utilisateur", adult: "Adulte", child: "Enfant" },
     pending: { title: "Demande envoyee", default: "Votre demande est en attente d'approbation.", resend: "Renvoyer l'email", logout: "Quitter" },
     chat: { title: "Chat", logout: "Quitter", e2eeOff: "E2EE desactive", e2eeOn: "E2EE active", e2eeBtn: "Cle E2EE", requests: "Demandes d'acces", notify: "Activer alertes", draft: "Ecrivez un message...", send: "Envoyer" },
+    templates: { manage: "Gerer les modeles", add: "+ Modele", save: "Enregistrer modele", reset: "Nouveau", title: "Titre", message: "Message", category: "Categorie", order: "Ordre", editable: "Editable", active: "Active" },
     roles: { admin: "admin", adult: "adulte", child: "enfant", member: "membre" }
   },
   de: {
@@ -256,6 +287,7 @@ const I18N = {
     auth: { access: "Anmelden", newUser: "Neuer Nutzer", sendRequest: "Anfrage senden", continue: "Weiter", name: "Name", email: "E-Mail", password: "Passwort", userType: "Nutzertyp", adult: "Erwachsen", child: "Kind" },
     pending: { title: "Anfrage gesendet", default: "Deine Anfrage wartet auf Freigabe.", resend: "Bestatigung erneut senden", logout: "Abmelden" },
     chat: { title: "Chat", logout: "Abmelden", e2eeOff: "E2EE aus", e2eeOn: "E2EE an", e2eeBtn: "E2EE-Schlussel", requests: "Zugriffsanfragen", notify: "Hinweise aktivieren", draft: "Nachricht schreiben...", send: "Senden" },
+    templates: { manage: "Vorlagen verwalten", add: "+ Vorlage", save: "Vorlage speichern", reset: "Neu", title: "Titel", message: "Nachricht", category: "Kategorie", order: "Reihenfolge", editable: "Bearbeitbar", active: "Aktiv" },
     roles: { admin: "admin", adult: "erwachsen", child: "kind", member: "mitglied" }
   },
   it: {
@@ -266,6 +298,7 @@ const I18N = {
     auth: { access: "Accesso", newUser: "Nuovo utente", sendRequest: "Invia richiesta", continue: "Continua", name: "Nome", email: "Email", password: "Password", userType: "Tipo utente", adult: "Adulto", child: "Minore" },
     pending: { title: "Richiesta inviata", default: "La tua richiesta e in attesa di approvazione.", resend: "Reinvia email verifica", logout: "Esci" },
     chat: { title: "Chat", logout: "Esci", e2eeOff: "E2EE disattivata", e2eeOn: "E2EE attiva", e2eeBtn: "Chiave E2EE", requests: "Richieste di accesso", notify: "Attiva avvisi", draft: "Scrivi un messaggio...", send: "Invia" },
+    templates: { manage: "Gestisci modelli", add: "+ Modello", save: "Salva modello", reset: "Nuovo", title: "Titolo", message: "Messaggio", category: "Categoria", order: "Ordine", editable: "Modificabile", active: "Attiva" },
     roles: { admin: "admin", adult: "adulto", child: "minore", member: "membro" }
   },
   pt: {
@@ -276,6 +309,7 @@ const I18N = {
     auth: { access: "Entrar", newUser: "Novo utilizador", sendRequest: "Enviar pedido", continue: "Continuar", name: "Nome", email: "Email", password: "Senha", userType: "Tipo de utilizador", adult: "Adulto", child: "Crianca" },
     pending: { title: "Pedido enviado", default: "O seu pedido esta pendente de aprovacao.", resend: "Reenviar email de verificacao", logout: "Sair" },
     chat: { title: "Chat", logout: "Sair", e2eeOff: "E2EE desligado", e2eeOn: "E2EE ligado", e2eeBtn: "Chave E2EE", requests: "Pedidos de acesso", notify: "Ativar alertas", draft: "Escreva uma mensagem...", send: "Enviar" },
+    templates: { manage: "Gerir modelos", add: "+ Modelo", save: "Guardar modelo", reset: "Novo", title: "Titulo", message: "Mensagem", category: "Categoria", order: "Ordem", editable: "Editavel", active: "Ativa" },
     roles: { admin: "admin", adult: "adulto", child: "crianca", member: "membro" }
   }
 };
@@ -407,10 +441,16 @@ function applyStaticTranslations() {
   if (tabQuickBottom) tabQuickBottom.textContent = currentLang === "es" ? "Rápidos" : "Quick";
   if (tabChatBottom) tabChatBottom.textContent = currentLang === "es" ? "Chat" : "Chat";
   if (tabProfileBottom) tabProfileBottom.textContent = currentLang === "es" ? "Perfil" : "Profile";
-  if (templateAdminTitleEl) templateAdminTitleEl.textContent = currentLang === "es" ? "Gestionar plantillas" : "Manage templates";
-  if (templateAdminToggleBtnEl) templateAdminToggleBtnEl.textContent = currentLang === "es" ? "+ Plantilla" : "+ Template";
-  if (templateSaveBtnEl) templateSaveBtnEl.textContent = currentLang === "es" ? "Guardar plantilla" : "Save template";
-  if (templateResetBtnEl) templateResetBtnEl.textContent = currentLang === "es" ? "Nueva" : "New";
+  if (templateAdminTitleEl) templateAdminTitleEl.textContent = t("templates.manage");
+  if (templateAdminToggleBtnEl) templateAdminToggleBtnEl.textContent = t("templates.add");
+  if (templateSaveBtnEl) templateSaveBtnEl.textContent = t("templates.save");
+  if (templateResetBtnEl) templateResetBtnEl.textContent = t("templates.reset");
+  if (templateTitleLabelEl) templateTitleLabelEl.textContent = t("templates.title");
+  if (templateTextLabelEl) templateTextLabelEl.textContent = t("templates.message");
+  if (templateCategoryLabelEl) templateCategoryLabelEl.textContent = t("templates.category");
+  if (templateOrderLabelEl) templateOrderLabelEl.textContent = t("templates.order");
+  if (templateEditableLabelEl) templateEditableLabelEl.textContent = t("templates.editable");
+  if (templateActiveLabelEl) templateActiveLabelEl.textContent = t("templates.active");
 
   if (templateCategoryInputEl && templateCategoryInputEl.options.length === 0) {
     for (const category of TEMPLATE_CATEGORIES) {
