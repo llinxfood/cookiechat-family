@@ -300,6 +300,22 @@ function categoryLabel(category) {
   return isEs ? "General" : "General";
 }
 
+function categoryIcon(category) {
+  if (category === "morning") return "☀️";
+  if (category === "school") return "📚";
+  if (category === "love") return "❤️";
+  if (category === "night") return "🌙";
+  return "💬";
+}
+
+function categoryTheme(category) {
+  if (category === "morning") return "theme-morning";
+  if (category === "school") return "theme-school";
+  if (category === "love") return "theme-love";
+  if (category === "night") return "theme-night";
+  return "";
+}
+
 function cleanTemplatePayload(raw) {
   const title = String(raw?.title || "").trim().slice(0, 40);
   const text = String(raw?.text || "").trim().slice(0, 240);
@@ -848,18 +864,47 @@ function renderQuickTemplateButtons() {
   }
 
   for (const template of visible) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "quick-template-btn";
-    btn.textContent = template.title;
+    const card = document.createElement("article");
+    card.className = `quick-template-card ${categoryTheme(template.category)}`;
+
+    const head = document.createElement("div");
+    head.className = "quick-template-head";
+
+    const icon = document.createElement("span");
+    icon.className = "quick-template-icon";
+    icon.textContent = categoryIcon(template.category);
+
+    const title = document.createElement("h4");
+    title.className = "quick-template-title";
+    title.textContent = template.title;
+
+    const preview = document.createElement("p");
+    preview.className = "quick-template-preview";
+    preview.textContent = template.text.slice(0, 72);
+
+    const actions = document.createElement("div");
+    actions.className = "quick-template-actions";
+
+    const sendBtn = document.createElement("button");
+    sendBtn.type = "button";
+    sendBtn.className = "quick-template-send";
+    sendBtn.textContent = currentLang === "es" ? "Enviar tarjeta" : "Send card";
+    sendBtn.addEventListener("click", async () => {
+      await handleQuickTemplateClick(template);
+    });
+
     const meta = document.createElement("span");
     meta.className = "quick-template-meta";
     meta.textContent = template.editable ? (currentLang === "es" ? "Editable" : "Editable") : (currentLang === "es" ? "Un toque" : "One tap");
-    btn.appendChild(meta);
-    btn.addEventListener("click", async () => {
-      await handleQuickTemplateClick(template);
-    });
-    quickTemplateListEl.appendChild(btn);
+
+    head.appendChild(icon);
+    head.appendChild(title);
+    actions.appendChild(sendBtn);
+    actions.appendChild(meta);
+    card.appendChild(head);
+    card.appendChild(preview);
+    card.appendChild(actions);
+    quickTemplateListEl.appendChild(card);
   }
 }
 
