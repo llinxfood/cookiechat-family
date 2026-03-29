@@ -129,9 +129,9 @@ const I18N = {
       app: "Instalar app",
       cookiechat: "Instalar CookieChat",
       iosTitle: "Instalar en iPhone/iPad",
-      iosHint: "Anadela a pantalla de inicio para usarla como app.",
+      iosHint: "Añádela a pantalla de inicio para usarla como app.",
       iosStep1: "Abre esta pagina en Safari.",
-      iosStep2: "Pulsa Compartir y luego Anadir a pantalla de inicio."
+      iosStep2: "Pulsa Compartir y luego Añadir a pantalla de inicio."
     },
     update: { available: "Hay una nueva version disponible.", now: "Actualizar ahora" },
     landing: {
@@ -148,7 +148,7 @@ const I18N = {
       continue: "Continuar",
       name: "Nombre",
       email: "Email",
-      password: "Contrasena",
+      password: "Contraseña",
       userType: "Tipo de usuario",
       adult: "Adulto",
       child: "Menor"
@@ -281,9 +281,9 @@ function t(path, fallback = "") {
 
 function categoryLabel(category) {
   const isEs = currentLang === "es";
-  if (category === "morning") return isEs ? "Manana" : "Morning";
+  if (category === "morning") return isEs ? "Mañana" : "Morning";
   if (category === "school") return isEs ? "Cole" : "School";
-  if (category === "love") return isEs ? "Carino" : "Love";
+  if (category === "love") return isEs ? "Cariño" : "Love";
   if (category === "night") return isEs ? "Noche" : "Night";
   return isEs ? "General" : "General";
 }
@@ -354,8 +354,8 @@ function applyStaticTranslations() {
   notifEnableBtn.textContent = t("chat.notify");
   draftEl.placeholder = t("chat.draft");
   if (composer.querySelector('button[type="submit"]')) composer.querySelector('button[type="submit"]').textContent = t("chat.send");
-  if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Mensajes rapidos" : "Quick messages";
-  if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Envia un mensaje carinoso en dos toques." : "Send a caring message in two taps.";
+  if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Mensajes rápidos" : "Quick messages";
+  if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Envía un mensaje cariñoso en dos toques." : "Send a caring message in two taps.";
   if (templateAdminTitleEl) templateAdminTitleEl.textContent = currentLang === "es" ? "Gestionar plantillas" : "Manage templates";
   if (templateAdminToggleBtnEl) templateAdminToggleBtnEl.textContent = currentLang === "es" ? "+ Plantilla" : "+ Template";
   if (templateSaveBtnEl) templateSaveBtnEl.textContent = currentLang === "es" ? "Guardar plantilla" : "Save template";
@@ -1269,7 +1269,7 @@ async function handleAuthSubmit(event) {
     if (error?.code === "auth/email-already-in-use") {
       setStatus(currentLang === "es" ? "Ese email ya existe. Usa Acceso o prueba otro correo." : "This email already exists. Use Sign in or try another email.", true);
     } else if (error?.code === "auth/invalid-credential") {
-      setStatus(currentLang === "es" ? "Credenciales no validas. Revisa email/contrasena o usa Nuevo usuario." : "Invalid credentials. Check email/password or use New user.", true);
+      setStatus(currentLang === "es" ? "Credenciales no válidas. Revisa email/contraseña o usa Nuevo usuario." : "Invalid credentials. Check email/password or use New user.", true);
     } else if (error?.code === "permission-denied") {
       setStatus(
         `Sin permisos para guardar la solicitud en families/${familyId}/joinRequests. Revisa Firestore Rules, familyId y despliegue de reglas.`,
@@ -1320,7 +1320,7 @@ emojiToggleBtn.addEventListener("click", () => {
 installBtnEl.addEventListener("click", async () => {
   if (!installPromptEvent) {
     if (isIOS()) {
-      setStatus(currentLang === "es" ? "En iPhone/iPad: Safari > Compartir > Anadir a pantalla de inicio." : "On iPhone/iPad: Safari > Share > Add to Home Screen.");
+      setStatus(currentLang === "es" ? "En iPhone/iPad: Safari > Compartir > Añadir a pantalla de inicio." : "On iPhone/iPad: Safari > Share > Add to Home Screen.");
     } else {
       setStatus(currentLang === "es" ? "Instalacion no disponible ahora mismo en este navegador." : "Install is not available right now in this browser.", true);
     }
