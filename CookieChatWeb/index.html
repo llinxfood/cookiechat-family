@@ -120,6 +120,25 @@
             <button id="logout-btn" class="secondary" type="button">Salir</button>
           </div>
         </div>
+        <section id="chat-section-card" class="card-soft">
+          <div class="chat-section-head">
+            <h3 id="chat-section-title">Conversación familiar</h3>
+            <button id="chat-collapse-btn" class="secondary" type="button">Cerrar chat</button>
+          </div>
+          <div id="chat-section-body">
+            <ul id="messages" class="messages" aria-live="polite"></ul>
+            <form id="composer" class="composer">
+              <div id="emoji-bar" class="emoji-bar hidden" aria-label="Emojis frecuentes"></div>
+              <div class="composer-row">
+                <button id="emoji-toggle" class="emoji-toggle secondary" type="button" aria-label="Mostrar emojis">
+                  😊
+                </button>
+                <input id="draft" type="text" maxlength="1000" placeholder="Escribe un mensaje..." required />
+                <button type="submit">Enviar</button>
+              </div>
+            </form>
+          </div>
+        </section>
         <section id="profile-panel" class="card-soft hidden">
           <div class="admin-panel-head">
             <h3 id="profile-title">Tu perfil</h3>
@@ -190,25 +209,6 @@
             </div>
           </form>
           <ul id="template-admin-list" class="requests"></ul>
-        </section>
-        <section id="chat-section-card" class="card-soft">
-          <div class="chat-section-head">
-            <h3 id="chat-section-title">Conversación familiar</h3>
-            <button id="chat-collapse-btn" class="secondary" type="button">Abrir chat</button>
-          </div>
-          <div id="chat-section-body" class="hidden">
-            <ul id="messages" class="messages" aria-live="polite"></ul>
-            <form id="composer" class="composer">
-              <div id="emoji-bar" class="emoji-bar hidden" aria-label="Emojis frecuentes"></div>
-              <div class="composer-row">
-                <button id="emoji-toggle" class="emoji-toggle secondary" type="button" aria-label="Mostrar emojis">
-                  😊
-                </button>
-                <input id="draft" type="text" maxlength="1000" placeholder="Escribe un mensaje..." required />
-                <button type="submit">Enviar</button>
-              </div>
-            </form>
-          </div>
         </section>
       </section>
     </main>

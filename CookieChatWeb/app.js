@@ -119,7 +119,7 @@ let unsubscribeTemplates = null;
 let templates = [];
 let selectedTemplateCategory = "morning";
 let hasSeededTemplates = false;
-let isChatCollapsed = true;
+let isChatCollapsed = false;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 const E2EE_PREFIX = "e2ee:v1:";
 const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
@@ -1551,9 +1551,9 @@ onAuthStateChanged(auth, async (user) => {
     lastPendingCount = null;
     templates = [];
     hasSeededTemplates = false;
-    isChatCollapsed = true;
+    isChatCollapsed = false;
     refreshE2EEIndicator();
-    setChatCollapsed(true);
+    setChatCollapsed(false);
     adminPanel.classList.add("hidden");
     templateAdminToggleBtnEl.classList.add("hidden");
     templateAdminPanelEl.classList.add("hidden");
@@ -1587,7 +1587,7 @@ onAuthStateChanged(auth, async (user) => {
 
     verifyEmailBtn.classList.add("hidden");
     setView("chat");
-    setChatCollapsed(true);
+    setChatCollapsed(false);
     setStatus(currentLang === "es" ? "Conectada." : "Connected.");
     watchMessages();
     watchTemplates();
