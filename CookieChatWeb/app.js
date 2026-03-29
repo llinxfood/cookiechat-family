@@ -72,6 +72,7 @@ const quickTemplatesTitleEl = document.querySelector("#quick-templates-title");
 const quickTemplatesSubtitleEl = document.querySelector("#quick-templates-subtitle");
 const quickTemplateCategoriesEl = document.querySelector("#quick-template-categories");
 const quickTemplateListEl = document.querySelector("#quick-template-list");
+const templateAdminToggleBtnEl = document.querySelector("#template-admin-toggle-btn");
 const templateAdminPanelEl = document.querySelector("#template-admin-panel");
 const templateAdminTitleEl = document.querySelector("#template-admin-title");
 const templateFormEl = document.querySelector("#template-form");
@@ -356,6 +357,7 @@ function applyStaticTranslations() {
   if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Mensajes rapidos" : "Quick messages";
   if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Envia un mensaje carinoso en dos toques." : "Send a caring message in two taps.";
   if (templateAdminTitleEl) templateAdminTitleEl.textContent = currentLang === "es" ? "Gestionar plantillas" : "Manage templates";
+  if (templateAdminToggleBtnEl) templateAdminToggleBtnEl.textContent = currentLang === "es" ? "+ Plantilla" : "+ Template";
   if (templateSaveBtnEl) templateSaveBtnEl.textContent = currentLang === "es" ? "Guardar plantilla" : "Save template";
   if (templateResetBtnEl) templateResetBtnEl.textContent = currentLang === "es" ? "Nueva" : "New";
 
@@ -1411,6 +1413,11 @@ if (templateResetBtnEl) {
     resetTemplateForm();
   });
 }
+if (templateAdminToggleBtnEl) {
+  templateAdminToggleBtnEl.addEventListener("click", () => {
+    templateAdminPanelEl.classList.toggle("hidden");
+  });
+}
 
 onAuthStateChanged(auth, async (user) => {
   if (unsubscribeMessages) {
@@ -1440,6 +1447,7 @@ onAuthStateChanged(auth, async (user) => {
     hasSeededTemplates = false;
     refreshE2EEIndicator();
     adminPanel.classList.add("hidden");
+    templateAdminToggleBtnEl.classList.add("hidden");
     templateAdminPanelEl.classList.add("hidden");
     setView("auth");
     setStatus("");
@@ -1473,11 +1481,13 @@ onAuthStateChanged(auth, async (user) => {
 
     if (currentUserIsAdmin) {
       adminPanel.classList.remove("hidden");
+      templateAdminToggleBtnEl.classList.remove("hidden");
       templateAdminPanelEl.classList.remove("hidden");
       watchJoinRequests();
       resetTemplateForm();
     } else {
       adminPanel.classList.add("hidden");
+      templateAdminToggleBtnEl.classList.add("hidden");
       templateAdminPanelEl.classList.add("hidden");
     }
     return;

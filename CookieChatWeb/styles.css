@@ -431,6 +431,14 @@ button.secondary {
   font-size: 1rem;
 }
 
+.quick-templates-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .quick-templates-head p {
   margin: 0 0 10px;
   color: #35537f;
