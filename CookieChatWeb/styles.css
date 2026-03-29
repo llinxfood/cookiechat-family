@@ -770,6 +770,22 @@ button.secondary {
   font-size: 1.02rem;
 }
 
+.drawing-message {
+  margin: 8px 0 0;
+  border: 1px solid rgba(30, 76, 150, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 8px;
+}
+
+.drawing-message canvas {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  display: block;
+}
+
 .composer {
   position: relative;
 }
@@ -777,7 +793,7 @@ button.secondary {
 .composer-row {
   display: grid;
   gap: 8px;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto auto 1fr auto;
   align-items: center;
 }
 
@@ -786,6 +802,38 @@ button.secondary {
   padding: 10px;
   font-size: 1.2rem;
   line-height: 1;
+}
+
+.draw-panel {
+  margin: 0 0 10px;
+  border: 1px solid rgba(30, 76, 150, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 10px;
+  box-shadow: 0 10px 22px rgba(12, 42, 88, 0.12);
+}
+
+.draw-panel canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid rgba(32, 76, 150, 0.22);
+  background: #ffffff;
+  touch-action: none;
+}
+
+.draw-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.draw-actions button {
+  padding: 8px 10px;
+  font-size: 0.9rem;
 }
 
 .emoji-bar {
@@ -890,7 +938,7 @@ button.secondary {
   }
 
   .composer-row {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto auto 1fr;
   }
 
   .composer-row button[type="submit"] {

@@ -194,9 +194,20 @@
               <ul id="messages" class="messages" aria-live="polite"></ul>
               <form id="composer" class="composer">
                 <div id="emoji-bar" class="emoji-bar hidden" aria-label="Emojis frecuentes"></div>
+                <div id="draw-panel" class="draw-panel hidden" aria-label="Panel de dibujo">
+                  <canvas id="draw-canvas" width="320" height="180"></canvas>
+                  <div class="draw-actions">
+                    <button id="draw-clear-btn" class="secondary" type="button">Limpiar</button>
+                    <button id="draw-send-btn" type="button">Enviar dibujo</button>
+                    <button id="draw-close-btn" class="secondary" type="button">Cerrar</button>
+                  </div>
+                </div>
                 <div class="composer-row">
                   <button id="emoji-toggle" class="emoji-toggle secondary" type="button" aria-label="Mostrar emojis">
                     😊
+                  </button>
+                  <button id="draw-toggle" class="emoji-toggle secondary" type="button" aria-label="Dibujar">
+                    🎨
                   </button>
                   <input id="draft" type="text" maxlength="1000" placeholder="Escribe un mensaje..." required />
                   <button type="submit">Enviar</button>

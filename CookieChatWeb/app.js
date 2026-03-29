@@ -68,6 +68,12 @@ const composer = document.querySelector("#composer");
 const draftEl = document.querySelector("#draft");
 const emojiBarEl = document.querySelector("#emoji-bar");
 const emojiToggleBtn = document.querySelector("#emoji-toggle");
+const drawPanelEl = document.querySelector("#draw-panel");
+const drawCanvasEl = document.querySelector("#draw-canvas");
+const drawToggleBtn = document.querySelector("#draw-toggle");
+const drawClearBtn = document.querySelector("#draw-clear-btn");
+const drawSendBtn = document.querySelector("#draw-send-btn");
+const drawCloseBtn = document.querySelector("#draw-close-btn");
 const adminPanel = document.querySelector("#admin-panel");
 const adminPanelTitleEl = document.querySelector("#admin-panel h3");
 const joinRequestsEl = document.querySelector("#join-requests");
@@ -131,10 +137,17 @@ let selectedTemplateCategory = "morning";
 let hasSeededTemplates = false;
 let isChatCollapsed = false;
 let currentLoggedInTab = "quick";
+let drawCtx = null;
+let drawStrokes = [];
+let drawCurrentStroke = null;
+let isDrawing = false;
+let drawLogicalWidth = 320;
+let drawLogicalHeight = 180;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 const E2EE_PREFIX = "e2ee:v1:";
+const DRAW_PREFIX = "draw:v1:";
 const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
-const MAX_STORED_TEXT_LENGTH = 1000;
+const MAX_STORED_TEXT_LENGTH = 5000;
 const LANG_STORAGE_KEY = "cookiechat.lang";
 const SUPPORTED_LANGS = ["es", "en", "fr", "de", "it", "pt"];
 const TEMPLATE_CATEGORIES = ["morning", "school", "love", "night"];
@@ -191,7 +204,11 @@ const I18N = {
       requests: "Solicitudes de acceso",
       notify: "Activar avisos",
       draft: "Escribe un mensaje...",
-      send: "Enviar"
+      send: "Enviar",
+      draw: "Dibujar",
+      clear: "Limpiar",
+      close: "Cerrar",
+      sendDrawing: "Enviar dibujo"
     },
     templates: {
       manage: "Gestionar plantillas",
@@ -252,7 +269,11 @@ const I18N = {
       requests: "Access requests",
       notify: "Enable alerts",
       draft: "Write a message...",
-      send: "Send"
+      send: "Send",
+      draw: "Draw",
+      clear: "Clear",
+      close: "Close",
+      sendDrawing: "Send drawing"
     },
     templates: {
       manage: "Manage templates",
@@ -275,7 +296,7 @@ const I18N = {
     landing: { title: "Un chat prive, sur et simple.", subtitle: "CookieChat garde la conversation fermee.", f1: "Validation manuelle des membres", f2: "Acces prive par compte authentifie", f3: "Disponible sur mobile, tablette et ordinateur" },
     auth: { access: "Acces", newUser: "Nouvel utilisateur", sendRequest: "Envoyer la demande", continue: "Continuer", name: "Nom", email: "Email", password: "Mot de passe", userType: "Type d'utilisateur", adult: "Adulte", child: "Enfant" },
     pending: { title: "Demande envoyee", default: "Votre demande est en attente d'approbation.", resend: "Renvoyer l'email", logout: "Quitter" },
-    chat: { title: "Chat", logout: "Quitter", e2eeOff: "E2EE desactive", e2eeOn: "E2EE active", e2eeBtn: "Cle E2EE", requests: "Demandes d'acces", notify: "Activer alertes", draft: "Ecrivez un message...", send: "Envoyer" },
+    chat: { title: "Chat", logout: "Quitter", e2eeOff: "E2EE desactive", e2eeOn: "E2EE active", e2eeBtn: "Cle E2EE", requests: "Demandes d'acces", notify: "Activer alertes", draft: "Ecrivez un message...", send: "Envoyer", draw: "Dessiner", clear: "Effacer", close: "Fermer", sendDrawing: "Envoyer dessin" },
     templates: { manage: "Gerer les modeles", add: "+ Modele", save: "Enregistrer modele", reset: "Nouveau", title: "Titre", message: "Message", category: "Categorie", order: "Ordre", editable: "Editable", active: "Active" },
     roles: { admin: "admin", adult: "adulte", child: "enfant", member: "membre" }
   },
@@ -286,7 +307,7 @@ const I18N = {
     landing: { title: "Ein privater, sicherer und einfacher Chat.", subtitle: "CookieChat halt Gesprache geschlossen.", f1: "Manuelle Freigabe neuer Mitglieder", f2: "Privater Zugang mit Konto", f3: "Verfugbar auf Handy, Tablet und Desktop" },
     auth: { access: "Anmelden", newUser: "Neuer Nutzer", sendRequest: "Anfrage senden", continue: "Weiter", name: "Name", email: "E-Mail", password: "Passwort", userType: "Nutzertyp", adult: "Erwachsen", child: "Kind" },
     pending: { title: "Anfrage gesendet", default: "Deine Anfrage wartet auf Freigabe.", resend: "Bestatigung erneut senden", logout: "Abmelden" },
-    chat: { title: "Chat", logout: "Abmelden", e2eeOff: "E2EE aus", e2eeOn: "E2EE an", e2eeBtn: "E2EE-Schlussel", requests: "Zugriffsanfragen", notify: "Hinweise aktivieren", draft: "Nachricht schreiben...", send: "Senden" },
+    chat: { title: "Chat", logout: "Abmelden", e2eeOff: "E2EE aus", e2eeOn: "E2EE an", e2eeBtn: "E2EE-Schlussel", requests: "Zugriffsanfragen", notify: "Hinweise aktivieren", draft: "Nachricht schreiben...", send: "Senden", draw: "Zeichnen", clear: "Leeren", close: "Schliessen", sendDrawing: "Zeichnung senden" },
     templates: { manage: "Vorlagen verwalten", add: "+ Vorlage", save: "Vorlage speichern", reset: "Neu", title: "Titel", message: "Nachricht", category: "Kategorie", order: "Reihenfolge", editable: "Bearbeitbar", active: "Aktiv" },
     roles: { admin: "admin", adult: "erwachsen", child: "kind", member: "mitglied" }
   },
@@ -297,7 +318,7 @@ const I18N = {
     landing: { title: "Una chat privata, sicura e semplice.", subtitle: "CookieChat mantiene la conversazione chiusa.", f1: "Approvazione manuale dei membri", f2: "Accesso privato con account autenticato", f3: "Disponibile su mobile, tablet e desktop" },
     auth: { access: "Accesso", newUser: "Nuovo utente", sendRequest: "Invia richiesta", continue: "Continua", name: "Nome", email: "Email", password: "Password", userType: "Tipo utente", adult: "Adulto", child: "Minore" },
     pending: { title: "Richiesta inviata", default: "La tua richiesta e in attesa di approvazione.", resend: "Reinvia email verifica", logout: "Esci" },
-    chat: { title: "Chat", logout: "Esci", e2eeOff: "E2EE disattivata", e2eeOn: "E2EE attiva", e2eeBtn: "Chiave E2EE", requests: "Richieste di accesso", notify: "Attiva avvisi", draft: "Scrivi un messaggio...", send: "Invia" },
+    chat: { title: "Chat", logout: "Esci", e2eeOff: "E2EE disattivata", e2eeOn: "E2EE attiva", e2eeBtn: "Chiave E2EE", requests: "Richieste di accesso", notify: "Attiva avvisi", draft: "Scrivi un messaggio...", send: "Invia", draw: "Disegna", clear: "Pulisci", close: "Chiudi", sendDrawing: "Invia disegno" },
     templates: { manage: "Gestisci modelli", add: "+ Modello", save: "Salva modello", reset: "Nuovo", title: "Titolo", message: "Messaggio", category: "Categoria", order: "Ordine", editable: "Modificabile", active: "Attiva" },
     roles: { admin: "admin", adult: "adulto", child: "minore", member: "membro" }
   },
@@ -308,7 +329,7 @@ const I18N = {
     landing: { title: "Um chat privado, seguro e simples.", subtitle: "CookieChat mantem a conversa fechada.", f1: "Aprovacao manual de novos membros", f2: "Acesso privado com conta autenticada", f3: "Disponivel em telemovel, tablet e computador" },
     auth: { access: "Entrar", newUser: "Novo utilizador", sendRequest: "Enviar pedido", continue: "Continuar", name: "Nome", email: "Email", password: "Senha", userType: "Tipo de utilizador", adult: "Adulto", child: "Crianca" },
     pending: { title: "Pedido enviado", default: "O seu pedido esta pendente de aprovacao.", resend: "Reenviar email de verificacao", logout: "Sair" },
-    chat: { title: "Chat", logout: "Sair", e2eeOff: "E2EE desligado", e2eeOn: "E2EE ligado", e2eeBtn: "Chave E2EE", requests: "Pedidos de acesso", notify: "Ativar alertas", draft: "Escreva uma mensagem...", send: "Enviar" },
+    chat: { title: "Chat", logout: "Sair", e2eeOff: "E2EE desligado", e2eeOn: "E2EE ligado", e2eeBtn: "Chave E2EE", requests: "Pedidos de acesso", notify: "Ativar alertas", draft: "Escreva uma mensagem...", send: "Enviar", draw: "Desenhar", clear: "Limpar", close: "Fechar", sendDrawing: "Enviar desenho" },
     templates: { manage: "Gerir modelos", add: "+ Modelo", save: "Guardar modelo", reset: "Novo", title: "Titulo", message: "Mensagem", category: "Categoria", order: "Ordem", editable: "Editavel", active: "Ativa" },
     roles: { admin: "admin", adult: "adulto", child: "crianca", member: "membro" }
   }
@@ -426,6 +447,13 @@ function applyStaticTranslations() {
   notifEnableBtn.textContent = t("chat.notify");
   draftEl.placeholder = t("chat.draft");
   if (composer.querySelector('button[type="submit"]')) composer.querySelector('button[type="submit"]').textContent = t("chat.send");
+  if (drawToggleBtn) {
+    drawToggleBtn.setAttribute("aria-label", t("chat.draw"));
+    drawToggleBtn.title = t("chat.draw");
+  }
+  if (drawClearBtn) drawClearBtn.textContent = t("chat.clear");
+  if (drawCloseBtn) drawCloseBtn.textContent = t("chat.close");
+  if (drawSendBtn) drawSendBtn.textContent = t("chat.sendDrawing");
   if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Saludos rápidos" : "Quick greetings";
   if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Saluda en 1-2 toques y vuelve a tu día." : "Greet in 1-2 taps and get back to your day.";
   if (chatSectionTitleEl) chatSectionTitleEl.textContent = currentLang === "es" ? "Conversación familiar" : "Family chat";
@@ -518,6 +546,11 @@ function setLoggedInTab(tab) {
 
   if (currentLoggedInTab === "profile" && profileNameInputEl) {
     profileNameInputEl.value = currentUserName || "";
+  }
+
+  if (currentLoggedInTab !== "chat") {
+    closeDrawPanel();
+    if (emojiBarEl) emojiBarEl.classList.add("hidden");
   }
 }
 
@@ -862,6 +895,173 @@ function renderEmojiBar() {
   }
 }
 
+function closeDrawPanel() {
+  if (drawPanelEl) drawPanelEl.classList.add("hidden");
+}
+
+function openDrawPanel() {
+  if (drawPanelEl) drawPanelEl.classList.remove("hidden");
+  if (emojiBarEl) emojiBarEl.classList.add("hidden");
+  resizeDrawCanvas();
+}
+
+function getCanvasPoint(event) {
+  if (!drawCanvasEl) return { x: 0, y: 0 };
+  const rect = drawCanvasEl.getBoundingClientRect();
+  const source = event.touches?.[0] || event.changedTouches?.[0] || event;
+  const x = ((source.clientX - rect.left) / rect.width) * drawLogicalWidth;
+  const y = ((source.clientY - rect.top) / rect.height) * drawLogicalHeight;
+  return { x, y };
+}
+
+function drawStrokeSegment(a, b) {
+  if (!drawCtx) return;
+  drawCtx.beginPath();
+  drawCtx.moveTo(a.x, a.y);
+  drawCtx.lineTo(b.x, b.y);
+  drawCtx.stroke();
+}
+
+function redrawCanvasFromStrokes() {
+  if (!drawCtx || !drawCanvasEl) return;
+  drawCtx.clearRect(0, 0, drawLogicalWidth, drawLogicalHeight);
+  drawCtx.fillStyle = "#ffffff";
+  drawCtx.fillRect(0, 0, drawLogicalWidth, drawLogicalHeight);
+  drawCtx.lineCap = "round";
+  drawCtx.lineJoin = "round";
+  drawCtx.strokeStyle = "#1f4c8f";
+  drawCtx.lineWidth = 4;
+
+  for (const stroke of drawStrokes) {
+    for (let i = 1; i < stroke.length; i += 1) {
+      drawStrokeSegment(stroke[i - 1], stroke[i]);
+    }
+  }
+}
+
+function resizeDrawCanvas() {
+  if (!drawCanvasEl) return;
+  const rect = drawCanvasEl.getBoundingClientRect();
+  const width = Math.max(240, Math.round(rect.width || 320));
+  const height = Math.max(140, Math.round(width * 0.56));
+  drawLogicalWidth = width;
+  drawLogicalHeight = height;
+  const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  drawCanvasEl.width = Math.round(width * ratio);
+  drawCanvasEl.height = Math.round(height * ratio);
+  if (!drawCtx) drawCtx = drawCanvasEl.getContext("2d");
+  drawCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  redrawCanvasFromStrokes();
+}
+
+function clearDrawing() {
+  drawStrokes = [];
+  drawCurrentStroke = null;
+  redrawCanvasFromStrokes();
+}
+
+function startDrawing(event) {
+  if (!drawCanvasEl) return;
+  isDrawing = true;
+  const point = getCanvasPoint(event);
+  drawCurrentStroke = [point];
+  drawStrokes.push(drawCurrentStroke);
+  event.preventDefault();
+}
+
+function continueDrawing(event) {
+  if (!isDrawing || !drawCurrentStroke) return;
+  const point = getCanvasPoint(event);
+  const prev = drawCurrentStroke[drawCurrentStroke.length - 1];
+  const dx = point.x - prev.x;
+  const dy = point.y - prev.y;
+  if ((dx * dx) + (dy * dy) < 6) {
+    event.preventDefault();
+    return;
+  }
+  drawCurrentStroke.push(point);
+  drawStrokeSegment(prev, point);
+  event.preventDefault();
+}
+
+function endDrawing(event) {
+  if (!isDrawing) return;
+  isDrawing = false;
+  drawCurrentStroke = null;
+  if (event) event.preventDefault();
+}
+
+function serializeDrawing() {
+  if (!drawCanvasEl || !drawStrokes.length) return "";
+  const compact = drawStrokes
+    .map((stroke) => {
+      const points = [];
+      for (let i = 0; i < stroke.length; i += 1) {
+        if (i > 0 && i % 2 !== 0) continue;
+        const px = Math.max(0, Math.min(999, Math.round((stroke[i].x / drawLogicalWidth) * 1000)));
+        const py = Math.max(0, Math.min(999, Math.round((stroke[i].y / drawLogicalHeight) * 1000)));
+        points.push(`${px},${py}`);
+      }
+      return points.join(".");
+    })
+    .filter(Boolean)
+    .join("~");
+  return compact ? `${DRAW_PREFIX}${compact}` : "";
+}
+
+function parseDrawing(payload) {
+  if (typeof payload !== "string" || !payload.startsWith(DRAW_PREFIX)) return null;
+  const content = payload.slice(DRAW_PREFIX.length);
+  if (!content) return null;
+  const strokeBlocks = content.split("~");
+  const strokes = [];
+  for (const block of strokeBlocks) {
+    if (!block) continue;
+    const points = [];
+    for (const pair of block.split(".")) {
+      const [sx, sy] = pair.split(",");
+      const x = Number(sx);
+      const y = Number(sy);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      points.push({ x, y });
+    }
+    if (points.length > 0) strokes.push(points);
+  }
+  return strokes.length ? strokes : null;
+}
+
+function renderDrawingMessage(payload, hostEl) {
+  const parsed = parseDrawing(payload);
+  if (!parsed || !hostEl) return false;
+  const wrap = document.createElement("div");
+  wrap.className = "drawing-message";
+  const canvas = document.createElement("canvas");
+  canvas.width = 320;
+  canvas.height = 180;
+  wrap.appendChild(canvas);
+  hostEl.appendChild(wrap);
+
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#1f4c8f";
+  ctx.lineWidth = 4;
+
+  for (const stroke of parsed) {
+    for (let i = 1; i < stroke.length; i += 1) {
+      const a = stroke[i - 1];
+      const b = stroke[i];
+      ctx.beginPath();
+      ctx.moveTo((a.x / 1000) * canvas.width, (a.y / 1000) * canvas.height);
+      ctx.lineTo((b.x / 1000) * canvas.width, (b.y / 1000) * canvas.height);
+      ctx.stroke();
+    }
+  }
+  return true;
+}
+
 async function sendTextMessage(text) {
   const safeText = String(text || "").trim();
   if (!safeText || !auth.currentUser || !currentUserRole) return;
@@ -1166,16 +1366,16 @@ async function renderMessages(docs) {
     meta.className = "meta";
     meta.textContent = `${senderName} · ${roleText} · ${formatDate(message.createdAt)}`;
 
-    const text = document.createElement("p");
     const rawText = typeof message.text === "string" ? message.text : "";
+    let decryptedText = rawText;
     if (isEncryptedPayload(rawText)) {
       hasEncryptedMessages = true;
     }
 
     try {
-      text.textContent = await decryptText(rawText);
+      decryptedText = await decryptText(rawText);
     } catch {
-      text.textContent = isEncryptedPayload(rawText)
+      decryptedText = isEncryptedPayload(rawText)
         ? (currentLang === "es" ? "Mensaje cifrado. Configura o revisa la clave E2EE." : "Encrypted message. Configure or review your E2EE key.")
         : rawText;
     }
@@ -1183,7 +1383,11 @@ async function renderMessages(docs) {
     header.appendChild(avatar);
     header.appendChild(meta);
     item.appendChild(header);
-    item.appendChild(text);
+    if (!renderDrawingMessage(decryptedText, item)) {
+      const text = document.createElement("p");
+      text.textContent = decryptedText;
+      item.appendChild(text);
+    }
     messagesEl.appendChild(item);
   }
 
@@ -1501,6 +1705,24 @@ async function handleSend(event) {
   }
 }
 
+async function handleSendDrawing() {
+  if (!auth.currentUser || !currentUserRole) return;
+  const payload = serializeDrawing();
+  if (!payload) {
+    setStatus(currentLang === "es" ? "Haz un dibujo antes de enviar." : "Draw something before sending.", true);
+    return;
+  }
+
+  try {
+    await sendTextMessage(payload);
+    clearDrawing();
+    closeDrawPanel();
+    setStatus(currentLang === "es" ? "Dibujo enviado." : "Drawing sent.");
+  } catch (error) {
+    setStatus(currentLang === "es" ? `No se pudo enviar dibujo: ${error.message}` : `Could not send drawing: ${error.message}`, true);
+  }
+}
+
 function handleDraftKeydown(event) {
   // En iOS/iPad algunos teclados no disparan el submit del form con Enter.
   if (event.key !== "Enter" || event.shiftKey) return;
@@ -1515,8 +1737,35 @@ composer.addEventListener("submit", handleSend);
 draftEl.addEventListener("keydown", handleDraftKeydown);
 emojiToggleBtn.addEventListener("click", () => {
   emojiBarEl.classList.toggle("hidden");
+  if (!emojiBarEl.classList.contains("hidden")) {
+    closeDrawPanel();
+  }
   draftEl.focus();
 });
+if (drawToggleBtn) {
+  drawToggleBtn.addEventListener("click", () => {
+    if (drawPanelEl?.classList.contains("hidden")) {
+      openDrawPanel();
+    } else {
+      closeDrawPanel();
+    }
+  });
+}
+if (drawClearBtn) {
+  drawClearBtn.addEventListener("click", () => {
+    clearDrawing();
+  });
+}
+if (drawCloseBtn) {
+  drawCloseBtn.addEventListener("click", () => {
+    closeDrawPanel();
+  });
+}
+if (drawSendBtn) {
+  drawSendBtn.addEventListener("click", async () => {
+    await handleSendDrawing();
+  });
+}
 if (chatCollapseBtnEl) {
   chatCollapseBtnEl.addEventListener("click", () => {
     setChatCollapsed(!isChatCollapsed);
@@ -1852,3 +2101,24 @@ setupInstallUI();
 setAuthMode("login");
 refreshE2EEIndicator();
 updateNotificationButtonLabel();
+
+if (drawCanvasEl) {
+  resizeDrawCanvas();
+  if ("PointerEvent" in window) {
+    drawCanvasEl.addEventListener("pointerdown", startDrawing);
+    drawCanvasEl.addEventListener("pointermove", continueDrawing);
+    drawCanvasEl.addEventListener("pointerup", endDrawing);
+    drawCanvasEl.addEventListener("pointerleave", endDrawing);
+  } else {
+    drawCanvasEl.addEventListener("touchstart", startDrawing, { passive: false });
+    drawCanvasEl.addEventListener("touchmove", continueDrawing, { passive: false });
+    drawCanvasEl.addEventListener("touchend", endDrawing, { passive: false });
+    drawCanvasEl.addEventListener("mousedown", startDrawing);
+    drawCanvasEl.addEventListener("mousemove", continueDrawing);
+    drawCanvasEl.addEventListener("mouseup", endDrawing);
+    drawCanvasEl.addEventListener("mouseleave", endDrawing);
+  }
+  window.addEventListener("resize", () => {
+    resizeDrawCanvas();
+  });
+}
