@@ -13,15 +13,19 @@ import {
   getFirestore,
   doc,
   getDoc,
+  getDocs,
   setDoc,
+  deleteField,
   collection,
   addDoc,
   query,
+  where,
   orderBy,
   limit,
   onSnapshot,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  Timestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { firebaseConfig, familyId, roomId } from "./config/firebase-config.js";
 
@@ -33,6 +37,7 @@ const statusEl = document.querySelector("#status");
 const installCardEl = document.querySelector("#install-card");
 const installTitleEl = document.querySelector("#install-title");
 const installBtnEl = document.querySelector("#install-btn");
+const openAppBtnEl = document.querySelector("#open-app-btn");
 const installHintEl = document.querySelector("#install-hint");
 const installStepsEl = document.querySelector("#install-steps");
 const updateCardEl = document.querySelector("#update-card");
@@ -63,6 +68,16 @@ const profileNameLabelEl = document.querySelector("#profile-name-label");
 const profileNameInputEl = document.querySelector("#profile-name-input");
 const profileSaveBtnEl = document.querySelector("#profile-save-btn");
 const profileCancelBtnEl = document.querySelector("#profile-cancel-btn");
+const profileSubtitleEl = document.querySelector("#profile-subtitle");
+const profileRoleLabelEl = document.querySelector("#profile-role-label");
+const profileRoleValueEl = document.querySelector("#profile-role-value");
+const profileEmailLabelEl = document.querySelector("#profile-email-label");
+const profileEmailValueEl = document.querySelector("#profile-email-value");
+const retentionHoursRowEl = document.querySelector("#retention-hours-row");
+const retentionHoursLabelEl = document.querySelector("#retention-hours-label");
+const retentionHoursInputEl = document.querySelector("#retention-hours-input");
+const retentionPresetsEl = document.querySelector("#retention-presets");
+const retentionHintEl = document.querySelector("#retention-hint");
 const messagesEl = document.querySelector("#messages");
 const composer = document.querySelector("#composer");
 const draftEl = document.querySelector("#draft");
@@ -76,6 +91,7 @@ const drawSendBtn = document.querySelector("#draw-send-btn");
 const drawCloseBtn = document.querySelector("#draw-close-btn");
 const adminPanel = document.querySelector("#admin-panel");
 const adminPanelTitleEl = document.querySelector("#admin-panel h3");
+const adminPanelSubtitleEl = document.querySelector("#admin-panel-subtitle");
 const joinRequestsEl = document.querySelector("#join-requests");
 const pendingBadgeEl = document.querySelector("#pending-badge");
 const notifEnableBtn = document.querySelector("#notif-enable-btn");
@@ -84,8 +100,13 @@ const privacyPillEl = document.querySelector("#privacy-pill");
 const quickTemplatesCardEl = document.querySelector("#quick-templates-card");
 const quickTemplatesTitleEl = document.querySelector("#quick-templates-title");
 const quickTemplatesSubtitleEl = document.querySelector("#quick-templates-subtitle");
+const quickRecipientLabelEl = document.querySelector("#quick-recipient-label");
+const quickRecipientOptionsEl = document.querySelector("#quick-recipient-options");
 const quickTemplateCategoriesEl = document.querySelector("#quick-template-categories");
 const quickTemplateListEl = document.querySelector("#quick-template-list");
+const cardsSectionTitleEl = document.querySelector("#cards-section-title");
+const cardsSectionSubtitleEl = document.querySelector("#cards-section-subtitle");
+const cardsListEl = document.querySelector("#cards-list");
 const templateAdminToggleBtnEl = document.querySelector("#template-admin-toggle-btn");
 const templateAdminPanelEl = document.querySelector("#template-admin-panel");
 const templateAdminTitleEl = document.querySelector("#template-admin-title");
@@ -109,18 +130,23 @@ const templateAdminListEl = document.querySelector("#template-admin-list");
 const chatSectionTitleEl = document.querySelector("#chat-section-title");
 const chatCollapseBtnEl = document.querySelector("#chat-collapse-btn");
 const chatSectionBodyEl = document.querySelector("#chat-section-body");
+const chatJumpBtnEl = document.querySelector("#chat-jump-btn");
 const sectionQuickEl = document.querySelector("#section-quick");
 const sectionChatEl = document.querySelector("#section-chat");
 const sectionProfileEl = document.querySelector("#section-profile");
 const tabButtons = document.querySelectorAll("[data-tab-target]");
+const retentionPresetButtons = document.querySelectorAll("[data-retention-hours]");
 
 let currentUserRole = null;
 let currentUserId = null;
 let currentUserName = "Usuario";
 let currentUserIsAdmin = false;
+let familyMemberIds = [];
+let familyMembers = [];
 let authMode = "login";
 let unsubscribeMessages = null;
 let unsubscribeRequests = null;
+let unsubscribeCards = null;
 let installPromptEvent = null;
 let waitingServiceWorker = null;
 let isSubmittingAuth = false;
@@ -128,6 +154,7 @@ let canShowInstallCard = false;
 let e2eeKey = null;
 let e2eeFingerprint = "";
 let latestMessageDocs = [];
+let latestCardDocs = [];
 let missingE2EEKeyNoticeShown = false;
 let lastPendingCount = null;
 let currentLang = "es";
@@ -137,18 +164,26 @@ let selectedTemplateCategory = "morning";
 let hasSeededTemplates = false;
 let isChatCollapsed = false;
 let currentLoggedInTab = "quick";
+let templateInlineDrafts = {};
+let selectedRecipientId = "all";
 let drawCtx = null;
 let drawStrokes = [];
 let drawCurrentStroke = null;
 let isDrawing = false;
 let drawLogicalWidth = 320;
 let drawLogicalHeight = 180;
+let familyRetentionHours = 720;
+let cleanupTimer = null;
+let cleanupBusy = false;
+let hasRenderedMessagesOnce = false;
+let seenMessageIds = new Set();
+let seenCardIds = new Set();
+let shouldStickChatToBottom = true;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 const E2EE_PREFIX = "e2ee:v1:";
 const DRAW_PREFIX = "draw:v1:";
 const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
 const MAX_STORED_TEXT_LENGTH = 5000;
-const LANG_STORAGE_KEY = "cookiechat.lang";
 const SUPPORTED_LANGS = ["es", "en", "fr", "de", "it", "pt"];
 const TEMPLATE_CATEGORIES = ["morning", "school", "love", "night"];
 const TEMPLATE_DEFAULTS = [
@@ -222,6 +257,23 @@ const I18N = {
       editable: "Editable",
       active: "Activa"
     },
+    cards: {
+      title: "Tarjetas recibidas",
+      receivedSubtitle: "Postales cariñosas que te llegan en privado o para todos.",
+      sendCard: "Enviar tarjeta",
+      editBeforeSend: "Editar antes de enviar",
+      cancel: "Cancelar",
+      saveAndSend: "Guardar y enviar",
+      oneTap: "Un toque",
+      noCards: "Todavia no hay tarjetas recibidas.",
+      sendTo: "Enviar a:",
+      all: "Todos",
+      toYou: "Para ti",
+      toAll: "Para todos"
+    },
+    retention: {
+      label: "Borrado automático de mensajes (horas)"
+    },
     roles: { admin: "admin", adult: "adulto", child: "menor", member: "miembro" }
   },
   en: {
@@ -287,6 +339,23 @@ const I18N = {
       editable: "Editable",
       active: "Active"
     },
+    cards: {
+      title: "Received cards",
+      receivedSubtitle: "Warm postcards sent to you privately or to everyone.",
+      sendCard: "Send card",
+      editBeforeSend: "Edit before sending",
+      cancel: "Cancel",
+      saveAndSend: "Save and send",
+      oneTap: "One tap",
+      noCards: "No received cards yet.",
+      sendTo: "Send to:",
+      all: "Everyone",
+      toYou: "For you",
+      toAll: "For everyone"
+    },
+    retention: {
+      label: "Auto-delete messages (hours)"
+    },
     roles: { admin: "admin", adult: "adult", child: "child", member: "member" }
   },
   fr: {
@@ -298,6 +367,8 @@ const I18N = {
     pending: { title: "Demande envoyee", default: "Votre demande est en attente d'approbation.", resend: "Renvoyer l'email", logout: "Quitter" },
     chat: { title: "Chat", logout: "Quitter", e2eeOff: "E2EE desactive", e2eeOn: "E2EE active", e2eeBtn: "Cle E2EE", requests: "Demandes d'acces", notify: "Activer alertes", draft: "Ecrivez un message...", send: "Envoyer", draw: "Dessiner", clear: "Effacer", close: "Fermer", sendDrawing: "Envoyer dessin" },
     templates: { manage: "Gerer les modeles", add: "+ Modele", save: "Enregistrer modele", reset: "Nouveau", title: "Titre", message: "Message", category: "Categorie", order: "Ordre", editable: "Editable", active: "Active" },
+    cards: { title: "Cartes recues", receivedSubtitle: "Cartes recues en prive ou partagees avec tous.", sendCard: "Envoyer carte", editBeforeSend: "Modifier avant envoi", cancel: "Annuler", saveAndSend: "Enregistrer et envoyer", oneTap: "Un geste", noCards: "Aucune carte recue.", sendTo: "Envoyer a:", all: "Tous", toYou: "Pour vous", toAll: "Pour tous" },
+    retention: { label: "Suppression auto (heures)" },
     roles: { admin: "admin", adult: "adulte", child: "enfant", member: "membre" }
   },
   de: {
@@ -309,6 +380,8 @@ const I18N = {
     pending: { title: "Anfrage gesendet", default: "Deine Anfrage wartet auf Freigabe.", resend: "Bestatigung erneut senden", logout: "Abmelden" },
     chat: { title: "Chat", logout: "Abmelden", e2eeOff: "E2EE aus", e2eeOn: "E2EE an", e2eeBtn: "E2EE-Schlussel", requests: "Zugriffsanfragen", notify: "Hinweise aktivieren", draft: "Nachricht schreiben...", send: "Senden", draw: "Zeichnen", clear: "Leeren", close: "Schliessen", sendDrawing: "Zeichnung senden" },
     templates: { manage: "Vorlagen verwalten", add: "+ Vorlage", save: "Vorlage speichern", reset: "Neu", title: "Titel", message: "Nachricht", category: "Kategorie", order: "Reihenfolge", editable: "Bearbeitbar", active: "Aktiv" },
+    cards: { title: "Empfangene Karten", receivedSubtitle: "Herzliche Karten, privat fur dich oder fur alle.", sendCard: "Karte senden", editBeforeSend: "Vor dem Senden bearbeiten", cancel: "Abbrechen", saveAndSend: "Speichern und senden", oneTap: "Ein Tippen", noCards: "Noch keine Karten empfangen.", sendTo: "Senden an:", all: "Alle", toYou: "Fur dich", toAll: "Fur alle" },
+    retention: { label: "Automatisch loschen (Stunden)" },
     roles: { admin: "admin", adult: "erwachsen", child: "kind", member: "mitglied" }
   },
   it: {
@@ -320,6 +393,8 @@ const I18N = {
     pending: { title: "Richiesta inviata", default: "La tua richiesta e in attesa di approvazione.", resend: "Reinvia email verifica", logout: "Esci" },
     chat: { title: "Chat", logout: "Esci", e2eeOff: "E2EE disattivata", e2eeOn: "E2EE attiva", e2eeBtn: "Chiave E2EE", requests: "Richieste di accesso", notify: "Attiva avvisi", draft: "Scrivi un messaggio...", send: "Invia", draw: "Disegna", clear: "Pulisci", close: "Chiudi", sendDrawing: "Invia disegno" },
     templates: { manage: "Gestisci modelli", add: "+ Modello", save: "Salva modello", reset: "Nuovo", title: "Titolo", message: "Messaggio", category: "Categoria", order: "Ordine", editable: "Modificabile", active: "Attiva" },
+    cards: { title: "Biglietti ricevuti", receivedSubtitle: "Biglietti affettuosi ricevuti in privato o per tutti.", sendCard: "Invia biglietto", editBeforeSend: "Modifica prima di inviare", cancel: "Annulla", saveAndSend: "Salva e invia", oneTap: "Un tocco", noCards: "Nessun biglietto ricevuto.", sendTo: "Invia a:", all: "Tutti", toYou: "Per te", toAll: "Per tutti" },
+    retention: { label: "Eliminazione automatica (ore)" },
     roles: { admin: "admin", adult: "adulto", child: "minore", member: "membro" }
   },
   pt: {
@@ -331,13 +406,13 @@ const I18N = {
     pending: { title: "Pedido enviado", default: "O seu pedido esta pendente de aprovacao.", resend: "Reenviar email de verificacao", logout: "Sair" },
     chat: { title: "Chat", logout: "Sair", e2eeOff: "E2EE desligado", e2eeOn: "E2EE ligado", e2eeBtn: "Chave E2EE", requests: "Pedidos de acesso", notify: "Ativar alertas", draft: "Escreva uma mensagem...", send: "Enviar", draw: "Desenhar", clear: "Limpar", close: "Fechar", sendDrawing: "Enviar desenho" },
     templates: { manage: "Gerir modelos", add: "+ Modelo", save: "Guardar modelo", reset: "Novo", title: "Titulo", message: "Mensagem", category: "Categoria", order: "Ordem", editable: "Editavel", active: "Ativa" },
+    cards: { title: "Cartoes recebidos", receivedSubtitle: "Cartoes carinhosos recebidos em privado ou para todos.", sendCard: "Enviar cartao", editBeforeSend: "Editar antes de enviar", cancel: "Cancelar", saveAndSend: "Guardar e enviar", oneTap: "Um toque", noCards: "Ainda sem cartoes recebidos.", sendTo: "Enviar para:", all: "Todos", toYou: "Para ti", toAll: "Para todos" },
+    retention: { label: "Eliminar automaticamente (horas)" },
     roles: { admin: "admin", adult: "adulto", child: "crianca", member: "membro" }
   }
 };
 
 function detectLanguage() {
-  const saved = localStorage.getItem(LANG_STORAGE_KEY);
-  if (saved && SUPPORTED_LANGS.includes(saved)) return saved;
   const browser = (navigator.language || "es").slice(0, 2).toLowerCase();
   return SUPPORTED_LANGS.includes(browser) ? browser : "es";
 }
@@ -351,13 +426,48 @@ function t(path, fallback = "") {
   return typeof fallbackValue === "string" ? fallbackValue : path;
 }
 
+function tr(esText, enText) {
+  return currentLang === "es" ? esText : enText;
+}
+
+function hashString(value) {
+  const text = String(value || "");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function userTheme(seed) {
+  const hue = hashString(seed) % 360;
+  return {
+    border: `hsla(${hue}, 72%, 48%, 0.33)`,
+    bg: `hsla(${hue}, 90%, 96%, 0.82)`,
+    avatarBg: `hsla(${hue}, 82%, 88%, 0.95)`,
+    avatarBorder: `hsla(${hue}, 72%, 48%, 0.38)`,
+    avatarText: `hsl(${hue}, 62%, 27%)`
+  };
+}
+
+function applyUserTheme(itemEl, avatarEl, seed) {
+  if (!itemEl || !avatarEl) return;
+  const theme = userTheme(seed);
+  itemEl.style.setProperty("--user-border", theme.border);
+  itemEl.style.setProperty("--user-bg", theme.bg);
+  itemEl.style.setProperty("--user-avatar-bg", theme.avatarBg);
+  itemEl.style.setProperty("--user-avatar-border", theme.avatarBorder);
+  itemEl.style.setProperty("--user-avatar-text", theme.avatarText);
+}
+
 function categoryLabel(category) {
   const isEs = currentLang === "es";
-  if (category === "morning") return isEs ? "Mañana" : "Morning";
-  if (category === "school") return isEs ? "Cole" : "School";
-  if (category === "love") return isEs ? "Cariño" : "Love";
-  if (category === "night") return isEs ? "Noche" : "Night";
-  return isEs ? "General" : "General";
+  if (category === "morning") return isEs ? "CookieMañana" : "CookieMorning";
+  if (category === "school") return isEs ? "CookieCole" : "CookieSchool";
+  if (category === "love") return isEs ? "CookieCariño" : "CookieLove";
+  if (category === "night") return isEs ? "CookieNoche" : "CookieNight";
+  return "Cookie";
 }
 
 function categoryIcon(category) {
@@ -439,11 +549,16 @@ function applyStaticTranslations() {
   if (chatTitle) chatTitle.textContent = t("chat.title");
   logoutBtn.textContent = t("chat.logout");
   e2eeKeyBtn.textContent = t("chat.e2eeBtn");
-  if (profileToggleBtnEl) profileToggleBtnEl.textContent = currentLang === "es" ? "Perfil" : "Profile";
-  if (profileTitleEl) profileTitleEl.textContent = currentLang === "es" ? "Tu perfil" : "Your profile";
-  if (profileNameLabelEl) profileNameLabelEl.textContent = currentLang === "es" ? "Nombre visible" : "Visible name";
-  if (profileSaveBtnEl) profileSaveBtnEl.textContent = currentLang === "es" ? "Guardar nombre" : "Save name";
-  if (profileCancelBtnEl) profileCancelBtnEl.textContent = currentLang === "es" ? "Cancelar" : "Cancel";
+  if (profileToggleBtnEl) profileToggleBtnEl.textContent = tr("Perfil", "Profile");
+  if (profileTitleEl) profileTitleEl.textContent = tr("Tu perfil", "Your profile");
+  if (profileSubtitleEl) profileSubtitleEl.textContent = tr("Ajusta tu nombre y la configuración básica de la familia.", "Update your name and basic family settings.");
+  if (profileRoleLabelEl) profileRoleLabelEl.textContent = tr("Rol", "Role");
+  if (profileEmailLabelEl) profileEmailLabelEl.textContent = "Email";
+  if (profileNameLabelEl) profileNameLabelEl.textContent = tr("Nombre visible", "Visible name");
+  if (retentionHoursLabelEl) retentionHoursLabelEl.textContent = t("retention.label");
+  if (retentionHintEl) retentionHintEl.textContent = tr("Los mensajes se eliminarán automáticamente tras el tiempo indicado.", "Messages will be deleted automatically after the selected time.");
+  if (profileSaveBtnEl) profileSaveBtnEl.textContent = tr("Guardar configuración", "Save settings");
+  if (profileCancelBtnEl) profileCancelBtnEl.textContent = tr("Cancelar", "Cancel");
   notifEnableBtn.textContent = t("chat.notify");
   draftEl.placeholder = t("chat.draft");
   if (composer.querySelector('button[type="submit"]')) composer.querySelector('button[type="submit"]').textContent = t("chat.send");
@@ -454,21 +569,26 @@ function applyStaticTranslations() {
   if (drawClearBtn) drawClearBtn.textContent = t("chat.clear");
   if (drawCloseBtn) drawCloseBtn.textContent = t("chat.close");
   if (drawSendBtn) drawSendBtn.textContent = t("chat.sendDrawing");
-  if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Saludos rápidos" : "Quick greetings";
-  if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Saluda en 1-2 toques y vuelve a tu día." : "Greet in 1-2 taps and get back to your day.";
-  if (chatSectionTitleEl) chatSectionTitleEl.textContent = currentLang === "es" ? "Conversación familiar" : "Family chat";
+  if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = "CookieExpress";
+  if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = tr("Envía cariño en 1-2 toques y vuelve a tu día.", "Send love in 1-2 taps and get back to your day.");
+  if (quickRecipientLabelEl) quickRecipientLabelEl.textContent = t("cards.sendTo");
+  if (cardsSectionTitleEl) cardsSectionTitleEl.textContent = t("cards.title");
+  if (cardsSectionSubtitleEl) cardsSectionSubtitleEl.textContent = t("cards.receivedSubtitle");
+  if (chatSectionTitleEl) chatSectionTitleEl.textContent = tr("Conversación familiar", "Family chat");
+  if (adminPanelSubtitleEl) adminPanelSubtitleEl.textContent = tr("Aprueba solo a tu familia.", "Approve only family members.");
+  if (chatJumpBtnEl) chatJumpBtnEl.textContent = chatJumpLabel();
   const tabQuickTop = document.querySelector("#tab-top-quick");
   const tabChatTop = document.querySelector("#tab-top-chat");
   const tabProfileTop = document.querySelector("#tab-top-profile");
   const tabQuickBottom = document.querySelector("#tab-bottom-quick");
   const tabChatBottom = document.querySelector("#tab-bottom-chat");
   const tabProfileBottom = document.querySelector("#tab-bottom-profile");
-  if (tabQuickTop) tabQuickTop.textContent = currentLang === "es" ? "Rápidos" : "Quick";
-  if (tabChatTop) tabChatTop.textContent = currentLang === "es" ? "Chat" : "Chat";
-  if (tabProfileTop) tabProfileTop.textContent = currentLang === "es" ? "Perfil" : "Profile";
-  if (tabQuickBottom) tabQuickBottom.textContent = currentLang === "es" ? "Rápidos" : "Quick";
-  if (tabChatBottom) tabChatBottom.textContent = currentLang === "es" ? "Chat" : "Chat";
-  if (tabProfileBottom) tabProfileBottom.textContent = currentLang === "es" ? "Perfil" : "Profile";
+  if (tabQuickTop) tabQuickTop.textContent = "CookieExpress";
+  if (tabChatTop) tabChatTop.textContent = tr("Chat", "Chat");
+  if (tabProfileTop) tabProfileTop.textContent = tr("Perfil", "Profile");
+  if (tabQuickBottom) tabQuickBottom.textContent = "CookieExpress";
+  if (tabChatBottom) tabChatBottom.textContent = tr("Chat", "Chat");
+  if (tabProfileBottom) tabProfileBottom.textContent = tr("Perfil", "Profile");
   if (templateAdminTitleEl) templateAdminTitleEl.textContent = t("templates.manage");
   if (templateAdminToggleBtnEl) templateAdminToggleBtnEl.textContent = t("templates.add");
   if (templateSaveBtnEl) templateSaveBtnEl.textContent = t("templates.save");
@@ -493,12 +613,13 @@ function applyStaticTranslations() {
       option.textContent = categoryLabel(option.value);
     }
   }
+  updateProfileSummary();
+  updateRetentionPresetState();
 }
 
 function setLanguage(lang) {
   const nextLang = SUPPORTED_LANGS.includes(lang) ? lang : "es";
   currentLang = nextLang;
-  localStorage.setItem(LANG_STORAGE_KEY, nextLang);
   document.documentElement.lang = nextLang;
   if (languageSelectEl) languageSelectEl.value = nextLang;
   applyStaticTranslations();
@@ -510,12 +631,96 @@ function setLanguage(lang) {
     updatePendingBadge(lastPendingCount);
   }
   renderTemplateCategories();
+  renderRecipientOptions();
   renderQuickTemplateButtons();
+  renderCards(latestCardDocs);
   if (currentUserIsAdmin) {
     renderTemplateAdminList();
   }
   setChatCollapsed(isChatCollapsed);
   setLoggedInTab(currentLoggedInTab);
+}
+
+function renderRecipientOptions() {
+  if (!quickRecipientOptionsEl) return;
+  quickRecipientOptionsEl.innerHTML = "";
+
+  const addBtn = (id, label) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `secondary recipient-chip${selectedRecipientId === id ? " active" : ""}`;
+    btn.textContent = label;
+    btn.addEventListener("click", () => {
+      selectedRecipientId = id;
+      renderRecipientOptions();
+    });
+    quickRecipientOptionsEl.appendChild(btn);
+  };
+
+  addBtn("all", t("cards.all"));
+  for (const member of familyMembers) {
+    if (!member?.uid || member.uid === currentUserId) continue;
+    addBtn(member.uid, member.displayName || member.uid);
+  }
+}
+
+function updateProfileSummary() {
+  if (profileRoleValueEl) {
+    profileRoleValueEl.textContent = roleLabel(currentUserRole || "member");
+  }
+  if (profileEmailValueEl) {
+    profileEmailValueEl.textContent = auth.currentUser?.email || "-";
+  }
+}
+
+function updateRetentionPresetState() {
+  if (!retentionPresetButtons?.length || !retentionHoursInputEl) return;
+  const current = clampRetentionHours(retentionHoursInputEl.value || familyRetentionHours);
+  retentionPresetButtons.forEach((btn) => {
+    const hours = clampRetentionHours(btn.dataset.retentionHours || 0);
+    btn.classList.toggle("active", hours === current);
+  });
+}
+
+function chatJumpLabel() {
+  return currentLang === "es" ? "Ir al final" : "Jump to latest";
+}
+
+function isScrollNearBottom(el, threshold = 96) {
+  if (!el) return true;
+  const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+  return distance <= threshold;
+}
+
+function scrollChatToBottom(force = false) {
+  if (!messagesEl) return;
+  if (!force && !shouldStickChatToBottom) return;
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function updateChatJumpButton() {
+  if (!chatJumpBtnEl || !messagesEl || currentLoggedInTab !== "chat" || isChatCollapsed) {
+    if (chatJumpBtnEl) chatJumpBtnEl.classList.add("hidden");
+    return;
+  }
+
+  const show = !isScrollNearBottom(messagesEl, 110);
+  chatJumpBtnEl.textContent = chatJumpLabel();
+  chatJumpBtnEl.classList.toggle("hidden", !show);
+}
+
+function setupViewportKeyboardGuard() {
+  if (typeof window === "undefined" || !window.visualViewport) return;
+
+  const refresh = () => {
+    const vv = window.visualViewport;
+    const inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty("--keyboard-offset", `${inset}px`);
+  };
+
+  window.visualViewport.addEventListener("resize", refresh);
+  window.visualViewport.addEventListener("scroll", refresh);
+  refresh();
 }
 
 function setChatCollapsed(collapsed) {
@@ -527,6 +732,14 @@ function setChatCollapsed(collapsed) {
     chatCollapseBtnEl.textContent = collapsed
       ? (currentLang === "es" ? "Abrir chat" : "Open chat")
       : (currentLang === "es" ? "Cerrar chat" : "Close chat");
+  }
+  if (!collapsed) {
+    requestAnimationFrame(() => {
+      scrollChatToBottom(true);
+      updateChatJumpButton();
+    });
+  } else if (chatJumpBtnEl) {
+    chatJumpBtnEl.classList.add("hidden");
   }
 }
 
@@ -546,16 +759,88 @@ function setLoggedInTab(tab) {
 
   if (currentLoggedInTab === "profile" && profileNameInputEl) {
     profileNameInputEl.value = currentUserName || "";
+    if (retentionHoursInputEl) retentionHoursInputEl.value = String(familyRetentionHours);
+    updateProfileSummary();
+    updateRetentionPresetState();
   }
 
   if (currentLoggedInTab !== "chat") {
     closeDrawPanel();
     if (emojiBarEl) emojiBarEl.classList.add("hidden");
   }
+  if (currentLoggedInTab === "chat") {
+    requestAnimationFrame(() => {
+      scrollChatToBottom(true);
+      updateChatJumpButton();
+      setTimeout(() => {
+        scrollChatToBottom(true);
+        updateChatJumpButton();
+      }, 80);
+    });
+  } else if (chatJumpBtnEl) {
+    chatJumpBtnEl.classList.add("hidden");
+  }
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function clampRetentionHours(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 720;
+  return Math.max(1, Math.min(8760, Math.round(n)));
+}
+
+function buildExpiryTimestamp() {
+  const hours = clampRetentionHours(familyRetentionHours);
+  const ms = Date.now() + (hours * 60 * 60 * 1000);
+  return Timestamp.fromDate(new Date(ms));
+}
+
+async function cleanupExpiredCollection(ref) {
+  const q = query(
+    ref,
+    where("expiresAt", "<=", Timestamp.now()),
+    limit(120)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return 0;
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  return snap.size;
+}
+
+async function cleanupExpiredContent() {
+  if (!currentUserIsAdmin || cleanupBusy) return;
+  cleanupBusy = true;
+  try {
+    const [mCount, cCount] = await Promise.all([
+      cleanupExpiredCollection(collection(db, "families", familyId, "rooms", roomId, "messages")),
+      cleanupExpiredCollection(collection(db, "families", familyId, "cards"))
+    ]);
+    if ((mCount + cCount) > 0) {
+      setStatus(currentLang === "es" ? `Limpieza automática: ${mCount} mensajes y ${cCount} tarjetas eliminados.` : `Auto-cleanup: removed ${mCount} messages and ${cCount} cards.`);
+    }
+  } catch {
+    // silent to avoid noisy status
+  } finally {
+    cleanupBusy = false;
+  }
+}
+
+function startCleanupLoop() {
+  if (cleanupTimer) clearInterval(cleanupTimer);
+  cleanupTimer = setInterval(() => {
+    void cleanupExpiredContent();
+  }, 120000);
+}
+
+function stopCleanupLoop() {
+  if (!cleanupTimer) return;
+  clearInterval(cleanupTimer);
+  cleanupTimer = null;
 }
 
 function supportsBrowserNotifications() {
@@ -744,6 +1029,19 @@ function roleLabel(role) {
   }
 }
 
+function roleIcon(role) {
+  switch (role) {
+    case "admin":
+      return "🛡️";
+    case "adult":
+      return "👤";
+    case "child":
+      return "🧒";
+    default:
+      return "👤";
+  }
+}
+
 function inferDisplayName(user) {
   const authName = user?.displayName?.trim();
   if (authName) return authName;
@@ -773,6 +1071,20 @@ function isStandalone() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
+function canShowDesktopAppButton() {
+  return !isStandalone() && !isIOS();
+}
+
+function updateOpenAppButton() {
+  if (!openAppBtnEl) return;
+  const show = canShowDesktopAppButton();
+  openAppBtnEl.classList.toggle("hidden", !show);
+  if (!show) return;
+  openAppBtnEl.textContent = installPromptEvent
+    ? tr("Instalar app", "Install app")
+    : tr("Abrir app", "Open app");
+}
+
 function renderInstallSteps(steps) {
   installStepsEl.innerHTML = "";
   for (let i = 0; i < steps.length; i += 1) {
@@ -793,6 +1105,8 @@ function renderInstallSteps(steps) {
 }
 
 function setupInstallUI() {
+  updateOpenAppButton();
+
   if (isStandalone()) {
     installCardEl.classList.add("hidden");
     return;
@@ -839,6 +1153,7 @@ function setView(view) {
   authCard.classList.toggle("hidden", view !== "auth");
   pendingCard.classList.toggle("hidden", view !== "pending");
   chatCard.classList.toggle("hidden", view !== "chat");
+  updateOpenAppButton();
 
   // La tarjeta de instalacion solo es util en pantalla de acceso.
   if (view === "auth" && !isStandalone() && canShowInstallCard) {
@@ -1078,7 +1393,35 @@ async function sendTextMessage(text) {
     senderRole: currentUserRole,
     text: storedText,
     type: "text",
-    createdAt: serverTimestamp()
+    createdAt: serverTimestamp(),
+    expiresAt: buildExpiryTimestamp()
+  });
+}
+
+async function sendQuickCard(payload) {
+  if (!auth.currentUser || !currentUserRole) return;
+  const title = String(payload?.title || "").trim().slice(0, 60);
+  const text = String(payload?.text || "").trim().slice(0, 280);
+  const category = TEMPLATE_CATEGORIES.includes(payload?.category) ? payload.category : "morning";
+  if (!title || !text) {
+    throw new Error(currentLang === "es" ? "Tarjeta incompleta." : "Incomplete card.");
+  }
+
+  const cardsRef = collection(db, "families", familyId, "cards");
+  const recipientIds = selectedRecipientId === "all" ? [] : [selectedRecipientId];
+  const recipientType = selectedRecipientId === "all" ? "all" : "selected";
+  await addDoc(cardsRef, {
+    senderId: auth.currentUser.uid,
+    senderName: currentUserName,
+    senderRole: currentUserRole,
+    type: "quick_card",
+    title,
+    text,
+    category,
+    recipientType,
+    recipientIds,
+    createdAt: serverTimestamp(),
+    expiresAt: buildExpiryTimestamp()
   });
 }
 
@@ -1099,28 +1442,25 @@ function renderTemplateCategories() {
   }
 }
 
-async function handleQuickTemplateClick(template) {
-  let finalText = template.text;
-
-  if (template.editable) {
-    const edited = window.prompt(
-      currentLang === "es" ? "Edita el mensaje antes de enviar:" : "Edit message before sending:",
-      template.text
-    );
-    if (edited === null) return;
-    finalText = String(edited || "").trim();
-  }
+async function handleQuickTemplateClick(template, inlineText = "") {
+  const finalText = String(template.editable ? inlineText : template.text || "").trim();
 
   if (!finalText) {
-    setStatus(currentLang === "es" ? "El mensaje esta vacio." : "Message is empty.", true);
+    setStatus(currentLang === "es" ? "El mensaje de la tarjeta esta vacio." : "Card message is empty.", true);
     return;
   }
 
   try {
-    await sendTextMessage(finalText);
-    setStatus(currentLang === "es" ? "Mensaje rapido enviado." : "Quick message sent.");
+    await sendQuickCard({
+      title: template.title,
+      text: finalText,
+      category: template.category
+    });
+    templateInlineDrafts[template.id] = "";
+    setStatus(currentLang === "es" ? "Tarjeta enviada." : "Card sent.");
+    renderQuickTemplateButtons();
   } catch (error) {
-    setStatus(currentLang === "es" ? `No se pudo enviar: ${error.message}` : `Could not send: ${error.message}`, true);
+    setStatus(currentLang === "es" ? `No se pudo enviar tarjeta: ${error.message}` : `Could not send card: ${error.message}`, true);
   }
 }
 
@@ -1165,18 +1505,57 @@ function renderQuickTemplateButtons() {
     const sendBtn = document.createElement("button");
     sendBtn.type = "button";
     sendBtn.className = "quick-template-send";
-    sendBtn.textContent = currentLang === "es" ? "Enviar tarjeta" : "Send card";
-    sendBtn.addEventListener("click", async () => {
-      await handleQuickTemplateClick(template);
-    });
+    sendBtn.textContent = t("cards.sendCard");
 
     const meta = document.createElement("span");
-    meta.className = "quick-template-meta";
-    meta.textContent = template.editable ? (currentLang === "es" ? "Editable" : "Editable") : (currentLang === "es" ? "Un toque" : "One tap");
+    meta.className = `quick-template-meta ${template.editable ? "is-editable" : "is-fixed"}`;
+    meta.textContent = template.editable ? t("cards.editBeforeSend") : t("cards.oneTap");
+
+    if (template.editable) {
+      const editor = document.createElement("div");
+      editor.className = "quick-template-editor";
+
+      const textarea = document.createElement("textarea");
+      textarea.className = "quick-template-edit-input";
+      textarea.rows = 3;
+      textarea.maxLength = 280;
+      const draft = templateInlineDrafts[template.id];
+      textarea.value = typeof draft === "string" && draft.length > 0 ? draft : template.text;
+      textarea.addEventListener("input", () => {
+        templateInlineDrafts[template.id] = textarea.value;
+      });
+
+      const editorActions = document.createElement("div");
+      editorActions.className = "quick-template-editor-actions";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "secondary";
+      cancelBtn.textContent = t("cards.cancel");
+      cancelBtn.addEventListener("click", () => {
+        templateInlineDrafts[template.id] = template.text;
+        textarea.value = template.text;
+      });
+
+      sendBtn.textContent = t("cards.saveAndSend");
+      sendBtn.addEventListener("click", async () => {
+        await handleQuickTemplateClick(template, textarea.value);
+      });
+
+      editorActions.appendChild(cancelBtn);
+      editorActions.appendChild(sendBtn);
+      editor.appendChild(textarea);
+      editor.appendChild(editorActions);
+      card.appendChild(editor);
+    } else {
+      sendBtn.addEventListener("click", async () => {
+        await handleQuickTemplateClick(template, template.text);
+      });
+      actions.appendChild(sendBtn);
+    }
 
     head.appendChild(icon);
     head.appendChild(title);
-    actions.appendChild(sendBtn);
     actions.appendChild(meta);
     card.appendChild(head);
     card.appendChild(preview);
@@ -1341,19 +1720,35 @@ function watchTemplates() {
 
 async function renderMessages(docs) {
   latestMessageDocs = docs;
+  const wasNearBottom = isScrollNearBottom(messagesEl, 96);
+  const newestSenderId = docs?.length ? docs[docs.length - 1].data()?.senderId : null;
+  const shouldAutoScroll =
+    !hasRenderedMessagesOnce ||
+    shouldStickChatToBottom ||
+    wasNearBottom ||
+    (newestSenderId && newestSenderId === currentUserId);
+  const currentSeenIds = new Set();
   messagesEl.innerHTML = "";
   let hasEncryptedMessages = false;
+  const allowedSenders = new Set(familyMemberIds || []);
 
   for (const docSnap of docs) {
+    const messageId = docSnap.id;
+    currentSeenIds.add(messageId);
     const message = docSnap.data();
+    if (message?.senderId && !allowedSenders.has(message.senderId)) {
+      continue;
+    }
     const item = document.createElement("li");
     const isMine = message.senderId === currentUserId;
     item.className = `message ${isMine ? "message-own" : "message-other"}`;
+    if (hasRenderedMessagesOnce && !seenMessageIds.has(messageId)) {
+      item.classList.add("message-enter");
+    }
 
     const senderName =
       message.senderName ||
       (message.senderId && message.senderId === currentUserId ? currentUserName : (currentLang === "es" ? "Usuario" : "User"));
-    const roleText = roleLabel(message.senderRole);
 
     const header = document.createElement("div");
     header.className = "message-header";
@@ -1361,10 +1756,11 @@ async function renderMessages(docs) {
     const avatar = document.createElement("span");
     avatar.className = "avatar";
     avatar.textContent = initialsFromName(senderName);
+    applyUserTheme(item, avatar, message.senderId || senderName);
 
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = `${senderName} · ${roleText} · ${formatDate(message.createdAt)}`;
+    meta.textContent = `${roleIcon(message.senderRole)} ${senderName} · ${formatDate(message.createdAt)}`;
 
     const rawText = typeof message.text === "string" ? message.text : "";
     let decryptedText = rawText;
@@ -1391,12 +1787,106 @@ async function renderMessages(docs) {
     messagesEl.appendChild(item);
   }
 
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  seenMessageIds = currentSeenIds;
+  hasRenderedMessagesOnce = true;
+  shouldStickChatToBottom = shouldAutoScroll;
+  if (shouldAutoScroll) {
+    scrollChatToBottom(true);
+  }
+  updateChatJumpButton();
 
   if (hasEncryptedMessages && !e2eeKey && !missingE2EEKeyNoticeShown) {
     missingE2EEKeyNoticeShown = true;
     setStatus(currentLang === "es" ? "Hay mensajes cifrados. Pulsa 'Clave E2EE' para leerlos." : "There are encrypted messages. Tap 'E2EE key' to read them.");
   }
+}
+
+function renderCards(docs) {
+  latestCardDocs = docs || [];
+  if (!cardsListEl) return;
+  cardsListEl.innerHTML = "";
+  const currentSeenIds = new Set();
+  const allowedSenders = new Set(familyMemberIds || []);
+
+  const receivedDocs = (docs || []).filter((docSnap) => {
+    const card = docSnap.data() || {};
+    if (card.senderId && !allowedSenders.has(card.senderId)) return false;
+    if (!card.senderId || card.senderId === currentUserId) return false;
+    const recipientType = card.recipientType || "all";
+    const recipientIds = Array.isArray(card.recipientIds) ? card.recipientIds : [];
+    if (recipientType === "all") return true;
+    return recipientIds.includes(currentUserId);
+  });
+
+  if (!receivedDocs.length) {
+    const empty = document.createElement("li");
+    empty.className = "message card-empty";
+    const text = document.createElement("p");
+    text.textContent = t("cards.noCards");
+    empty.appendChild(text);
+    cardsListEl.appendChild(empty);
+    return;
+  }
+
+  for (const docSnap of receivedDocs) {
+    currentSeenIds.add(docSnap.id);
+    const card = docSnap.data();
+    const item = document.createElement("li");
+    const recipientType = card.recipientType || "all";
+    item.className = `message card-message ${recipientType === "all" ? "card-message-all" : "card-message-direct"}`;
+    if (seenCardIds.size > 0 && !seenCardIds.has(docSnap.id)) {
+      item.classList.add("message-enter");
+    }
+
+    const header = document.createElement("div");
+    header.className = "message-header card-header";
+
+    const avatar = document.createElement("span");
+    avatar.className = "avatar";
+    avatar.textContent = initialsFromName(card.senderName || (currentLang === "es" ? "Usuario" : "User"));
+    applyUserTheme(item, avatar, card.senderId || card.senderName || docSnap.id);
+
+    const headerMeta = document.createElement("div");
+    headerMeta.className = "card-header-meta";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const sender = card.senderName || (currentLang === "es" ? "Usuario" : "User");
+    meta.textContent = `${roleIcon(card.senderRole)} ${sender} · ${formatDate(card.createdAt)}`;
+
+    const badges = document.createElement("div");
+    badges.className = "card-badges";
+
+    const targetBadge = document.createElement("span");
+    targetBadge.className = `card-badge ${recipientType === "all" ? "is-all" : "is-you"}`;
+    targetBadge.textContent = recipientType === "all" ? t("cards.toAll") : t("cards.toYou");
+    badges.appendChild(targetBadge);
+
+    if (card.category) {
+      const categoryBadge = document.createElement("span");
+      categoryBadge.className = "card-badge is-category";
+      categoryBadge.textContent = categoryLabel(card.category);
+      badges.appendChild(categoryBadge);
+    }
+
+    const title = document.createElement("p");
+    title.className = "card-title";
+    title.textContent = card.title || (currentLang === "es" ? "Tarjeta" : "Card");
+
+    const text = document.createElement("p");
+    text.className = "card-body";
+    text.textContent = card.text || "";
+
+    headerMeta.appendChild(meta);
+    headerMeta.appendChild(badges);
+    header.appendChild(avatar);
+    header.appendChild(headerMeta);
+    item.appendChild(header);
+    item.appendChild(title);
+    item.appendChild(text);
+    cardsListEl.appendChild(item);
+  }
+  seenCardIds = currentSeenIds;
 }
 
 async function loadMembership(user) {
@@ -1408,9 +1898,25 @@ async function loadMembership(user) {
   }
 
   const family = familySnap.data();
+  familyMemberIds = Object.keys(family?.members || {});
   const role = family?.members?.[user.uid];
   const isAdmin = family?.admins?.[user.uid] === true;
   const storedName = family?.memberNames?.[user.uid];
+  familyRetentionHours = clampRetentionHours(family?.settings?.retentionHours ?? 720);
+  familyMembers = Object.keys(family?.members || {})
+    .map((uid) => {
+      const displayName = String(family?.memberNames?.[uid] || "").trim();
+      if (!displayName && uid !== user.uid) return null;
+      return {
+        uid,
+        displayName: displayName || inferDisplayName(user)
+      };
+    })
+    .filter(Boolean);
+  if (selectedRecipientId !== "all" && !familyMembers.some((m) => m.uid === selectedRecipientId && m.uid !== user.uid)) {
+    selectedRecipientId = "all";
+  }
+  renderRecipientOptions();
 
   if (!role) {
     throw new Error(currentLang === "es" ? "Esta cuenta no esta aprobada en este grupo." : "This account is not approved in this family.");
@@ -1439,6 +1945,12 @@ async function loadMembership(user) {
   currentUserRole = role;
   currentUserName = resolvedName || inferDisplayName(user);
   currentUserIsAdmin = isAdmin || role === "admin";
+  if (retentionHoursInputEl) retentionHoursInputEl.value = String(familyRetentionHours);
+  if (retentionHoursRowEl) retentionHoursRowEl.classList.toggle("hidden", !currentUserIsAdmin);
+  if (retentionPresetsEl) retentionPresetsEl.classList.toggle("hidden", !currentUserIsAdmin);
+  if (retentionHintEl) retentionHintEl.classList.toggle("hidden", !currentUserIsAdmin);
+  updateProfileSummary();
+  updateRetentionPresetState();
 }
 
 async function saveOwnProfileName() {
@@ -1450,6 +1962,7 @@ async function saveOwnProfileName() {
   }
 
   try {
+    const nextRetentionHours = clampRetentionHours(retentionHoursInputEl?.value || familyRetentionHours);
     await setDoc(
       doc(db, "families", familyId, "userProfiles", currentUserId),
       {
@@ -1463,16 +1976,20 @@ async function saveOwnProfileName() {
       await setDoc(
         doc(db, "families", familyId),
         {
-          memberNames: { [currentUserId]: nextName }
+          memberNames: { [currentUserId]: nextName },
+          settings: { retentionHours: nextRetentionHours }
         },
         { merge: true }
       ).catch(() => {});
+      familyRetentionHours = nextRetentionHours;
     }
     currentUserName = nextName;
     setLoggedInTab("profile");
-    setStatus(currentLang === "es" ? "Nombre actualizado." : "Name updated.");
+    updateProfileSummary();
+    updateRetentionPresetState();
+    setStatus(tr("Configuración guardada.", "Settings saved."));
   } catch (error) {
-    setStatus(currentLang === "es" ? `No se pudo actualizar el nombre: ${error.message}` : `Could not update name: ${error.message}`, true);
+    setStatus(tr(`No se pudo guardar la configuración: ${error.message}`, `Could not save settings: ${error.message}`), true);
   }
 }
 
@@ -1497,6 +2014,24 @@ function watchMessages() {
   );
 }
 
+function watchCards() {
+  if (unsubscribeCards) {
+    unsubscribeCards();
+    unsubscribeCards = null;
+  }
+  const cardsRef = collection(db, "families", familyId, "cards");
+  const q = query(cardsRef, orderBy("createdAt", "desc"), limit(120));
+  unsubscribeCards = onSnapshot(
+    q,
+    (snapshot) => {
+      renderCards(snapshot.docs);
+    },
+    (error) => {
+      setStatus(currentLang === "es" ? `Error cargando tarjetas: ${error.message}` : `Error loading cards: ${error.message}`, true);
+    }
+  );
+}
+
 function renderJoinRequests(snapshot) {
   joinRequestsEl.innerHTML = "";
   const pendingDocs = snapshot.docs.filter((docSnap) => docSnap.data().status === "pending");
@@ -1511,7 +2046,8 @@ function renderJoinRequests(snapshot) {
 
   if (!pendingDocs.length) {
     const empty = document.createElement("li");
-    empty.textContent = currentLang === "es" ? "No hay solicitudes pendientes." : "No pending requests.";
+    empty.className = "request-empty";
+    empty.textContent = tr("No hay solicitudes pendientes.", "No pending requests.");
     joinRequestsEl.appendChild(empty);
     return;
   }
@@ -1519,39 +2055,60 @@ function renderJoinRequests(snapshot) {
   for (const docSnap of pendingDocs) {
     const request = docSnap.data();
     const li = document.createElement("li");
+    li.className = "request-item";
     const requestedRole = request.requestedRole || "adult";
-    const requestedName = request.displayName || (currentLang === "es" ? "Sin nombre" : "No name");
-    const displayName = request.displayName || (currentLang === "es" ? "Sin nombre" : "No name");
+    const requestedName = request.displayName || tr("Sin nombre", "No name");
+    const displayName = request.displayName || tr("Sin nombre", "No name");
     const email = request.email || "sin-email";
+
+    const top = document.createElement("div");
+    top.className = "request-top";
+
+    const identity = document.createElement("div");
+    identity.className = "request-identity";
+
+    const nameEl = document.createElement("p");
+    nameEl.className = "request-name";
+    nameEl.textContent = displayName;
 
     const meta = document.createElement("p");
     meta.className = "request-meta";
-    meta.textContent =
-      currentLang === "es"
-        ? `${displayName} · ${email} · solicita rol ${roleLabel(requestedRole)}`
-        : `${displayName} · ${email} · requested role ${roleLabel(requestedRole)}`;
+    meta.textContent = email;
+
+    const roleTag = document.createElement("span");
+    roleTag.className = "request-role-tag";
+    roleTag.textContent = tr(`Pide rol ${roleLabel(requestedRole)}`, `Requests ${roleLabel(requestedRole)} role`);
+
+    identity.appendChild(nameEl);
+    identity.appendChild(meta);
+    top.appendChild(identity);
+    top.appendChild(roleTag);
 
     const actions = document.createElement("div");
     actions.className = "request-actions";
 
     const approveBtn = document.createElement("button");
     approveBtn.type = "button";
-    approveBtn.textContent = currentLang === "es" ? "Aprobar" : "Approve";
+    approveBtn.textContent = tr("Aprobar", "Approve");
     approveBtn.addEventListener("click", async () => {
+      approveBtn.disabled = true;
+      rejectBtn.disabled = true;
       await reviewJoinRequest(docSnap.id, requestedRole, "approved", requestedName);
     });
 
     const rejectBtn = document.createElement("button");
     rejectBtn.type = "button";
     rejectBtn.className = "reject";
-    rejectBtn.textContent = currentLang === "es" ? "Rechazar" : "Reject";
+    rejectBtn.textContent = tr("Rechazar", "Reject");
     rejectBtn.addEventListener("click", async () => {
+      approveBtn.disabled = true;
+      rejectBtn.disabled = true;
       await reviewJoinRequest(docSnap.id, requestedRole, "rejected");
     });
 
     actions.appendChild(approveBtn);
     actions.appendChild(rejectBtn);
-    li.appendChild(meta);
+    li.appendChild(top);
     li.appendChild(actions);
     joinRequestsEl.appendChild(li);
   }
@@ -1599,6 +2156,7 @@ async function reviewJoinRequest(targetUserId, role, action, displayName = "") {
   if (!auth.currentUser || !currentUserId || !currentUserIsAdmin) return;
   const familyRef = doc(db, "families", familyId);
   const requestRef = doc(db, "families", familyId, "joinRequests", targetUserId);
+  const deniedRef = doc(db, "families", familyId, "deniedUsers", targetUserId);
   const batch = writeBatch(db);
 
   if (action === "approved") {
@@ -1611,6 +2169,29 @@ async function reviewJoinRequest(targetUserId, role, action, displayName = "") {
         memberNames: {
           [targetUserId]: String(displayName).trim() || (currentLang === "es" ? "Usuario" : "User")
         }
+      },
+      { merge: true }
+    );
+    batch.delete(deniedRef);
+  } else {
+    batch.set(
+      familyRef,
+      {
+        members: { [targetUserId]: deleteField() },
+        memberNames: { [targetUserId]: deleteField() },
+        admins: { [targetUserId]: deleteField() }
+      },
+      { merge: true }
+    );
+    batch.set(
+      deniedRef,
+      {
+        uid: targetUserId,
+        status: "rejected",
+        reviewedBy: currentUserId,
+        reviewedAt: serverTimestamp(),
+        deniedRole: role || null,
+        deniedName: String(displayName || "").trim().slice(0, 60)
       },
       { merge: true }
     );
@@ -1628,7 +2209,31 @@ async function reviewJoinRequest(targetUserId, role, action, displayName = "") {
   );
 
   await batch.commit();
+  if (action !== "approved") {
+    await purgeUserContent(targetUserId);
+  }
   setStatus(action === "approved" ? (currentLang === "es" ? "Usuario aprobado." : "User approved.") : (currentLang === "es" ? "Solicitud rechazada." : "Request rejected."));
+}
+
+async function purgeUserContent(targetUserId) {
+  if (!targetUserId) return;
+  const messageQuery = query(
+    collection(db, "families", familyId, "rooms", roomId, "messages"),
+    where("senderId", "==", targetUserId),
+    limit(200)
+  );
+  const cardQuery = query(
+    collection(db, "families", familyId, "cards"),
+    where("senderId", "==", targetUserId),
+    limit(200)
+  );
+  const [messageSnap, cardSnap] = await Promise.all([getDocs(messageQuery), getDocs(cardQuery)]);
+  const cleanupBatch = writeBatch(db);
+  messageSnap.docs.forEach((d) => cleanupBatch.delete(d.ref));
+  cardSnap.docs.forEach((d) => cleanupBatch.delete(d.ref));
+  if (!messageSnap.empty || !cardSnap.empty) {
+    await cleanupBatch.commit();
+  }
 }
 
 async function handleAuthSubmit(event) {
@@ -1700,6 +2305,9 @@ async function handleSend(event) {
   try {
     await sendTextMessage(text);
     draftEl.value = "";
+    shouldStickChatToBottom = true;
+    scrollChatToBottom(true);
+    updateChatJumpButton();
   } catch (error) {
     setStatus(currentLang === "es" ? `No se pudo enviar: ${error.message}` : `Could not send: ${error.message}`, true);
   }
@@ -1717,6 +2325,9 @@ async function handleSendDrawing() {
     await sendTextMessage(payload);
     clearDrawing();
     closeDrawPanel();
+    shouldStickChatToBottom = true;
+    scrollChatToBottom(true);
+    updateChatJumpButton();
     setStatus(currentLang === "es" ? "Dibujo enviado." : "Drawing sent.");
   } catch (error) {
     setStatus(currentLang === "es" ? `No se pudo enviar dibujo: ${error.message}` : `Could not send drawing: ${error.message}`, true);
@@ -1735,6 +2346,19 @@ modeRegisterBtn.addEventListener("click", () => setAuthMode("register"));
 loginForm.addEventListener("submit", handleAuthSubmit);
 composer.addEventListener("submit", handleSend);
 draftEl.addEventListener("keydown", handleDraftKeydown);
+if (messagesEl) {
+  messagesEl.addEventListener("scroll", () => {
+    shouldStickChatToBottom = isScrollNearBottom(messagesEl, 110);
+    updateChatJumpButton();
+  });
+}
+if (chatJumpBtnEl) {
+  chatJumpBtnEl.addEventListener("click", () => {
+    shouldStickChatToBottom = true;
+    scrollChatToBottom(true);
+    updateChatJumpButton();
+  });
+}
 emojiToggleBtn.addEventListener("click", () => {
   emojiBarEl.classList.toggle("hidden");
   if (!emojiBarEl.classList.contains("hidden")) {
@@ -1791,28 +2415,71 @@ if (profileFormEl) {
     await saveOwnProfileName();
   });
 }
-installBtnEl.addEventListener("click", async () => {
-  if (!installPromptEvent) {
-    if (isIOS()) {
-      setStatus(currentLang === "es" ? "En iPhone/iPad: Safari > Compartir > Añadir a pantalla de inicio." : "On iPhone/iPad: Safari > Share > Add to Home Screen.");
-    } else {
-      setStatus(currentLang === "es" ? "Instalacion no disponible ahora mismo en este navegador." : "Install is not available right now in this browser.", true);
+if (retentionHoursInputEl) {
+  retentionHoursInputEl.addEventListener("input", () => {
+    updateRetentionPresetState();
+  });
+}
+if (retentionPresetButtons?.length) {
+  retentionPresetButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!retentionHoursInputEl) return;
+      const next = clampRetentionHours(btn.dataset.retentionHours || familyRetentionHours);
+      retentionHoursInputEl.value = String(next);
+      updateRetentionPresetState();
+    });
+  });
+}
+
+async function handleOpenOrInstallApp() {
+  if (isStandalone()) {
+    setStatus(tr("Ya estás usando la app instalada.", "You are already using the installed app."));
+    return;
+  }
+
+  if (installPromptEvent) {
+    installPromptEvent.prompt();
+    try {
+      const choice = await installPromptEvent.userChoice;
+      if (choice?.outcome === "accepted") {
+        setStatus(tr("CookieChat instalada.", "CookieChat installed."));
+      }
+    } finally {
+      installPromptEvent = null;
+      canShowInstallCard = false;
+      installBtnEl.classList.add("hidden");
+      installCardEl.classList.add("hidden");
+      updateOpenAppButton();
     }
     return;
   }
-  installPromptEvent.prompt();
-  try {
-    const choice = await installPromptEvent.userChoice;
-    if (choice?.outcome === "accepted") {
-      setStatus(currentLang === "es" ? "CookieChat instalada." : "CookieChat installed.");
-    }
-  } finally {
-    installPromptEvent = null;
-    canShowInstallCard = false;
-    installBtnEl.classList.add("hidden");
-    installCardEl.classList.add("hidden");
+
+  const opened = window.open(window.location.href, "_blank", "noopener,noreferrer");
+  if (!opened) {
+    setStatus(tr("No se pudo abrir una ventana nueva.", "Could not open a new window."), true);
+    return;
   }
+
+  setStatus(
+    tr(
+      "Si CookieChat está instalada como app en Chrome, se abrirá en ventana de app.",
+      "If CookieChat is installed as a Chrome app, it should open in an app window."
+    )
+  );
+}
+
+installBtnEl.addEventListener("click", async () => {
+  if (!installPromptEvent && isIOS()) {
+    setStatus(currentLang === "es" ? "En iPhone/iPad: Safari > Compartir > Añadir a pantalla de inicio." : "On iPhone/iPad: Safari > Share > Add to Home Screen.");
+    return;
+  }
+  await handleOpenOrInstallApp();
 });
+if (openAppBtnEl) {
+  openAppBtnEl.addEventListener("click", async () => {
+    await handleOpenOrInstallApp();
+  });
+}
 updateBtnEl.addEventListener("click", () => {
   if (!waitingServiceWorker) {
     window.location.reload();
@@ -1913,8 +2580,13 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeTemplates();
     unsubscribeTemplates = null;
   }
+  if (unsubscribeCards) {
+    unsubscribeCards();
+    unsubscribeCards = null;
+  }
 
   if (!user) {
+    stopCleanupLoop();
     currentUserRole = null;
     currentUserId = null;
     currentUserName = currentLang === "es" ? "Usuario" : "User";
@@ -1922,9 +2594,19 @@ onAuthStateChanged(auth, async (user) => {
     e2eeKey = null;
     e2eeFingerprint = "";
     latestMessageDocs = [];
+    latestCardDocs = [];
+    seenMessageIds = new Set();
+    seenCardIds = new Set();
+    hasRenderedMessagesOnce = false;
+    shouldStickChatToBottom = true;
     missingE2EEKeyNoticeShown = false;
     lastPendingCount = null;
     templates = [];
+    templateInlineDrafts = {};
+    familyMembers = [];
+    familyMemberIds = [];
+    selectedRecipientId = "all";
+    familyRetentionHours = 720;
     hasSeededTemplates = false;
     isChatCollapsed = false;
     refreshE2EEIndicator();
@@ -1932,6 +2614,13 @@ onAuthStateChanged(auth, async (user) => {
     adminPanel.classList.add("hidden");
     templateAdminToggleBtnEl.classList.add("hidden");
     templateAdminPanelEl.classList.add("hidden");
+    if (retentionHoursRowEl) retentionHoursRowEl.classList.add("hidden");
+    if (retentionPresetsEl) retentionPresetsEl.classList.add("hidden");
+    if (retentionHintEl) retentionHintEl.classList.add("hidden");
+    if (profileRoleValueEl) profileRoleValueEl.textContent = "-";
+    if (profileEmailValueEl) profileEmailValueEl.textContent = "-";
+    renderRecipientOptions();
+    updateChatJumpButton();
     setLoggedInTab("quick");
     setView("auth");
     setStatus("");
@@ -1964,8 +2653,13 @@ onAuthStateChanged(auth, async (user) => {
     setView("chat");
     setChatCollapsed(false);
     setLoggedInTab("quick");
+    seenMessageIds = new Set();
+    seenCardIds = new Set();
+    hasRenderedMessagesOnce = false;
+    shouldStickChatToBottom = true;
     setStatus(currentLang === "es" ? "Conectada." : "Connected.");
     watchMessages();
+    watchCards();
     watchTemplates();
 
     if (currentUserIsAdmin) {
@@ -1974,7 +2668,10 @@ onAuthStateChanged(auth, async (user) => {
       templateAdminPanelEl.classList.remove("hidden");
       watchJoinRequests();
       resetTemplateForm();
+      startCleanupLoop();
+      void cleanupExpiredContent();
     } else {
+      stopCleanupLoop();
       adminPanel.classList.add("hidden");
       templateAdminToggleBtnEl.classList.add("hidden");
       templateAdminPanelEl.classList.add("hidden");
@@ -2077,6 +2774,7 @@ window.addEventListener("beforeinstallprompt", (event) => {
   installHintEl.textContent = t("install.cookiechat");
   installStepsEl.classList.add("hidden");
   installBtnEl.classList.remove("hidden");
+  updateOpenAppButton();
   if (!isStandalone() && !auth.currentUser) {
     installCardEl.classList.remove("hidden");
   }
@@ -2086,13 +2784,13 @@ window.addEventListener("appinstalled", () => {
   canShowInstallCard = false;
   installPromptEvent = null;
   installCardEl.classList.add("hidden");
+  updateOpenAppButton();
   setStatus(currentLang === "es" ? "CookieChat instalada." : "CookieChat installed.");
 });
 
 if (languageSelectEl) {
-  languageSelectEl.addEventListener("change", (event) => {
-    setLanguage(event.target.value);
-  });
+  const picker = languageSelectEl.closest(".language-picker");
+  if (picker) picker.classList.add("hidden");
 }
 
 setLanguage(detectLanguage());
@@ -2101,6 +2799,7 @@ setupInstallUI();
 setAuthMode("login");
 refreshE2EEIndicator();
 updateNotificationButtonLabel();
+setupViewportKeyboardGuard();
 
 if (drawCanvasEl) {
   resizeDrawCanvas();

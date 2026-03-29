@@ -1,206 +1,249 @@
 # CookieChat
 
-CookieChat is an open-source **private family chat PWA** built with Firebase.
-It is designed for small trusted groups with an approval-based onboarding flow and simple cross-device access.
+CookieChat is an open-source private family messaging PWA focused on **low-friction communication between kids and grandparents**.
 
-## Highlights
+It runs in browsers and can be installed as an app (iOS, Android, macOS, desktop) without publishing to mobile stores.
 
-- Private access with Firebase Authentication
-- Admin approval flow for new users
-- Real-time chat powered by Firestore
-- Optional email notifications to admins when a new join request is created
-- Installable as an app on iOS, Android, macOS, and desktop browsers
-- Lightweight frontend (vanilla HTML/CSS/JS)
+## Product Focus
 
-## Tech stack
+- Send affection in 1-2 taps with **CookieExpress** templates
+- Keep family conversations private with admin approval
+- Stay simple for non-technical users
 
-- Frontend: HTML, CSS, JavaScript (PWA)
-- Auth: Firebase Authentication (Email/Password)
+## Features
+
+- Firebase Authentication (Email/Password)
+- Admin approval flow for new accounts
+- Real-time family chat (Firestore)
+- Quick greeting cards with recipient targeting:
+  - everyone
+  - specific family member
+- Separate “received cards” feed (not mixed into chat)
+- Optional E2EE key mode (browser-side encryption)
+- Drawing message support
+- Per-user visual identity in chat (stable color theme + icon)
+- Browser-language detection (ES/EN/FR/DE/IT/PT)
+- Auto-delete retention window (admin-configurable, hours)
+- Install/update UX for PWA
+- Optional Cloud Functions email alerts for new join requests
+
+## Tech Stack
+
+- Frontend: Vanilla HTML/CSS/JS (PWA)
+- Auth: Firebase Authentication
 - Database: Cloud Firestore
 - Hosting: Firebase Hosting
-- Optional backend worker: Firebase Cloud Functions (Node.js)
+- Optional backend: Firebase Cloud Functions (Node.js)
 
-## Project structure
+## Repository Structure
 
-- `CookieChatWeb/` web app (single source of truth)
-- `CookieChatWeb/index.html` UI structure
-- `CookieChatWeb/styles.css` design system and layout
-- `CookieChatWeb/app.js` auth/chat/approvals/install/update logic
-- `CookieChatWeb/config/firebase-config.example.js` Firebase client config template
-- `CookieChatWeb/firestore.rules` security rules
-- `CookieChatWeb/firebase.json` Firebase deploy config
-- `functions/` Cloud Functions (admin email notifications)
+- `CookieChatWeb/` Main web application
+- `CookieChatWeb/index.html` App layout
+- `CookieChatWeb/styles.css` Design system and UI styling
+- `CookieChatWeb/app.js` Product logic (auth/chat/cards/admin/profile/PWA)
+- `CookieChatWeb/firestore.rules` Access control and write validation
+- `CookieChatWeb/firebase.json` Firebase deploy config for web app
+- `CookieChatWeb/config/firebase-config.example.js` Public config template
+- `functions/` Optional Cloud Functions (admin join-request emails)
 
-## Quick start
+## Prerequisites
 
-### 1) Clone the repository
+- Firebase project
+- Node.js 18+ and npm
+- Firebase CLI (`npm install -g firebase-tools`)
+- Python 3 (or any static file server) for local preview
+
+## Quick Start
+
+### 1) Clone
 
 ```bash
 git clone git@github.com:<your-github-user>/cookiechat-family.git
 cd cookiechat-family
 ```
 
-### 2) Requirements
-
-- A Firebase project
-- Node.js + npm (for Firebase CLI)
-- Python 3 (for local static server) or any static server
-
-Install Firebase CLI:
+### 2) Login Firebase CLI
 
 ```bash
-npm install -g firebase-tools
 firebase login
 ```
 
-### 3) Configure Firebase project
+### 3) Create Firebase Project
 
-1. In Firebase Console, create a project (Spark plan is enough to start).
-2. Enable `Authentication > Sign-in method > Email/Password`.
-3. Enable `Firestore Database` in production mode.
-4. Register a **Web app** and copy its SDK config.
-5. Copy the config template:
+In Firebase Console:
+
+1. Create project
+2. Enable Authentication -> Email/Password
+3. Create Firestore Database (production mode)
+4. Register a Web app and copy SDK config values
+
+### 4) Configure Client
 
 ```bash
 cp CookieChatWeb/config/firebase-config.example.js CookieChatWeb/config/firebase-config.js
 ```
 
-6. Paste your Firebase values into `CookieChatWeb/config/firebase-config.js`.
-7. Confirm `familyId` and `roomId` in that file (defaults: `family_demo_1`, `family_main`).
+Edit `CookieChatWeb/config/firebase-config.js`:
 
-### 4) Seed your first admin
+- Fill `firebaseConfig` from your Firebase Web app
+- Set `familyId` and `roomId` if needed
 
-1. Create one auth user in `Authentication > Users`.
-2. Copy that user's UID.
-3. In Firestore, create `families/family_demo_1` with:
-   - `admins.<UID> = true`
-   - `members.<UID> = "admin"`
-   - `memberNames.<UID> = "Your Name"`
-   - `name = "Cookie Family"`
-   - `status = "active"`
-4. Create `families/family_demo_1/rooms/family_main` with:
-   - `title = "Family chat"`
+Default values:
 
-## Local development
+- `familyId = "family_demo_1"`
+- `roomId = "family_main"`
+
+### 5) Seed First Admin
+
+1. Create one user in Firebase Authentication -> Users
+2. Copy that user UID
+3. Create Firestore document `families/<familyId>` with:
+
+```json
+{
+  "name": "Cookie Family",
+  "status": "active",
+  "admins": {
+    "<ADMIN_UID>": true
+  },
+  "members": {
+    "<ADMIN_UID>": "admin"
+  },
+  "memberNames": {
+    "<ADMIN_UID>": "Parent Admin"
+  }
+}
+```
+
+4. Create room document `families/<familyId>/rooms/<roomId>`:
+
+```json
+{
+  "title": "Family chat"
+}
+```
+
+### 6) Deploy Security Rules
+
+From repo root:
+
+```bash
+firebase deploy --project <your-project-id> --only firestore:rules --config CookieChatWeb/firebase.json
+```
+
+### 7) Run Locally
 
 ```bash
 cd CookieChatWeb
 python3 -m http.server 5173
 ```
 
-Open: `http://localhost:5173`
+Open:
 
-## Deployment runbook
+- `http://localhost:5173`
 
-### 1) Authenticate Firebase CLI
+### 8) Deploy Hosting
 
-```bash
-firebase login --reauth
-```
-
-### 2) Deploy Firestore rules first
+From repo root:
 
 ```bash
-cd /path/to/cookiechat-family
-firebase deploy --project <your-firebase-project-id> --only firestore:rules --config CookieChatWeb/firebase.json
+firebase deploy --project <your-project-id> --only hosting --config CookieChatWeb/firebase.json
 ```
 
-### 3) Deploy Hosting
+## Optional: Deploy Cloud Functions (Email Alerts)
+
+Use this only if you want admin emails when new join requests arrive.
+
+### Configure environment
 
 ```bash
-firebase deploy --project <your-firebase-project-id> --only hosting --config CookieChatWeb/firebase.json
+cp functions/.env.example functions/.env.<your-project-id>
 ```
 
-### 4) (Optional) Deploy Cloud Functions for admin email alerts
+Set values in `functions/.env.<your-project-id>`:
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+- Optional: `ADMIN_NOTIFICATION_EMAILS` (comma-separated fallback list)
+
+### Install and deploy
 
 ```bash
 cd functions
 npm install
-cp .env.example .env.<your-firebase-project-id>
-# fill SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM
 cd ..
-firebase deploy --project <your-firebase-project-id> --only functions --config CookieChatWeb/firebase.json
+firebase deploy --project <your-project-id> --only functions --config CookieChatWeb/firebase.json
 ```
 
-### 5) Verify production
+## Data Model Overview
 
-1. Open `https://<your-project-id>.web.app`
-2. Register a new user (`New user`)
-3. Confirm a `joinRequests` document appears in:
-   - `families/<familyId>/joinRequests/<uid>`
-4. Login as admin and approve request
-5. Confirm approved member can login and send message
+- `families/{familyId}`
+  - `members`, `admins`, `memberNames`, `settings.retentionHours`
+- `families/{familyId}/rooms/{roomId}/messages/{messageId}`
+  - chat messages (text or drawing payload), `expiresAt`
+- `families/{familyId}/cards/{cardId}`
+  - CookieExpress cards, recipient-scoped, `expiresAt`
+- `families/{familyId}/templates/{templateId}`
+  - admin-managed quick templates
+- `families/{familyId}/joinRequests/{uid}`
+  - onboarding request lifecycle (`pending`, `approved`, `rejected`)
+- `families/{familyId}/userProfiles/{uid}`
+  - display names
+- `families/{familyId}/deniedUsers/{uid}`
+  - rejection audit record
+
+## Security Model
+
+- Being an Auth user is not enough: user must be in `families/{familyId}.members`
+- Firestore rules validate sender identity/role, content limits, recipient fields, and timestamps
+- Only admins can approve/reject join requests
+- Rejected users are removed from membership maps
+- Expired messages/cards can be deleted by admin cleanup logic
+
+## Notes on Encryption
+
+- E2EE mode is optional and client-managed
+- Key is entered in browser and never stored server-side by this app
+- Without E2EE key configured, messages are stored as plaintext in Firestore
+
+## PWA Install Notes
+
+- iPhone/iPad: Safari -> Share -> Add to Home Screen
+- Chrome desktop/macOS: install/open from browser prompt or app header button
+- Service worker update checks run periodically; a refresh may still be needed after deploy
 
 ## Troubleshooting
 
-### `permission-denied` when creating a join request
+### `auth/api-key-not-valid`
+
+`CookieChatWeb/config/firebase-config.js` has placeholder or wrong config. Recopy values from Firebase Web app settings.
+
+### `permission-denied` on join request
 
 Check:
 
-1. `familyId` in `CookieChatWeb/config/firebase-config.js` matches an existing Firestore doc (`families/<familyId>`).
-2. Firestore doc contains:
-   - `admins.<admin_uid> = true`
-   - `members.<admin_uid> = "admin"`
-3. Latest rules were published (`firestore:rules` deploy succeeded).
+1. `familyId` in config matches Firestore document
+2. Admin UID exists in both `admins` and `members` maps
+3. Latest rules are deployed
 
-### `auth/api-key-not-valid`
+### Firestore console “error loading documents”
 
-`CookieChatWeb/config/firebase-config.js` has wrong/placeholder values. Recopy values from Firebase Web app settings.
+- Confirm correct Firebase project/account
+- Reload console in private window
+- Disable ad blockers/extensions for console
 
-### Firebase CLI says credentials expired
+### New deploy not visible on mobile
 
-Run:
+- Reopen browser and hard refresh
+- Remove old home-screen shortcut and add again
+- Ensure you are loading the correct Hosting URL
 
-```bash
-firebase login --reauth
-```
+## Current Roadmap Note
 
-Then redeploy.
+Planned but intentionally not implemented yet:
 
-### iOS install behavior
-
-On iPhone/iPad there is no native install prompt button. Users must use:
-
-- Safari -> Share -> Add to Home Screen
-
-### Email verification template shows wrong `%APP_NAME%`
-
-`%APP_NAME%` comes from Google Cloud OAuth Branding. If branding cannot be edited yet, use template text that does not depend on `%APP_NAME%`.
-
-## Security model
-
-- Only users listed in `families/{familyId}.members` can access the chat
-- New signups are stored as `pending` join requests
-- Only admins can approve or reject join requests
-- Firestore rules enforce all access control server-side
-
-## Optional: Admin Email Notifications (Cloud Functions)
-
-When enabled, every new `joinRequests` document triggers an email to admins.
-
-### 1) Configure SMTP
-
-```bash
-cp functions/.env.example functions/.env.<your-firebase-project-id>
-```
-
-Edit `functions/.env.<your-firebase-project-id>`:
-
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`
-- `SMTP_USER`, `SMTP_PASS`
-- `SMTP_FROM`
-- Optional `ADMIN_NOTIFICATION_EMAILS` (comma-separated fallback addresses)
-
-### 2) Install function dependencies
-
-```bash
-cd functions
-npm install
-cd ..
-```
-
-### 3) Deploy functions
-
-```bash
-firebase deploy --project <your-firebase-project-id> --only functions --config CookieChatWeb/firebase.json
-```
+- Full server-side push notifications per user/device with Cloud Functions + FCM and cost guardrails.

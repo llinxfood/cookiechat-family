@@ -15,8 +15,8 @@
       rel="stylesheet"
     />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32-v6.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v6.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32-v3.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-v3.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -25,10 +25,11 @@
     <main class="app-shell">
       <header class="topbar">
         <div class="brand-row">
-          <img class="hero-wordmark" src="./icons/logo-wordmark-v7.png" alt="CookieChat" />
+          <img class="hero-wordmark" src="./icons/logo-wordmark-v8.png" alt="CookieChat" />
         </div>
         <div class="topbar-tools">
           <span id="privacy-pill" class="privacy-pill">Privado y por invitacion</span>
+          <button id="open-app-btn" class="secondary topbar-app-btn hidden" type="button">Abrir app</button>
           <label class="language-picker" for="language-select" aria-label="Language selector">
             <span>🌐</span>
             <select id="language-select">
@@ -120,22 +121,35 @@
           </div>
         </div>
         <nav class="app-tabs desktop-tabs" aria-label="Secciones">
-          <button id="tab-top-quick" class="app-tab active" type="button" data-tab-target="quick">Rápidos</button>
+          <button id="tab-top-quick" class="app-tab active" type="button" data-tab-target="quick">CookieExpress</button>
           <button id="tab-top-chat" class="app-tab" type="button" data-tab-target="chat">Chat</button>
           <button id="tab-top-profile" class="app-tab" type="button" data-tab-target="profile">Perfil</button>
         </nav>
 
         <section id="section-quick">
-          <section id="quick-templates-card" class="quick-templates card-soft">
+          <section id="quick-templates-card" class="quick-templates card-soft card-soft-quick">
             <div class="quick-templates-head">
               <div>
-                <h3 id="quick-templates-title">Saludos rápidos</h3>
-                <p id="quick-templates-subtitle">Saluda en 1-2 toques y vuelve a tu día.</p>
+                <h3 id="quick-templates-title">CookieExpress</h3>
+                <p id="quick-templates-subtitle">Envía cariño en 1-2 toques y vuelve a tu día.</p>
               </div>
               <button id="template-admin-toggle-btn" class="secondary hidden" type="button">+ Plantilla</button>
             </div>
+            <div class="quick-recipient-bar">
+              <span id="quick-recipient-label" class="quick-recipient-label">Enviar a:</span>
+              <div id="quick-recipient-options" class="quick-recipient-options"></div>
+            </div>
             <div id="quick-template-categories" class="quick-template-categories"></div>
             <div id="quick-template-list" class="quick-template-list"></div>
+          </section>
+          <section id="cards-section-card" class="card-soft card-soft-postcards">
+            <div class="chat-section-head">
+              <h3 id="cards-section-title">Tarjetas recibidas</h3>
+            </div>
+            <p id="cards-section-subtitle" class="section-subtitle">
+              Postales cariñosas que te llegan en privado o para todos.
+            </p>
+            <ul id="cards-list" class="messages cards-list" aria-live="polite"></ul>
           </section>
           <section id="template-admin-panel" class="admin-panel hidden">
             <div class="admin-panel-head">
@@ -177,7 +191,12 @@
         <section id="section-chat" class="hidden">
           <section id="admin-panel" class="admin-panel hidden">
             <div class="admin-panel-head">
-              <h3>Solicitudes de acceso</h3>
+              <div>
+                <h3 id="admin-panel-title">Solicitudes de acceso</h3>
+                <p id="admin-panel-subtitle" class="section-subtitle section-subtitle-compact">
+                  Aprueba solo a tu familia.
+                </p>
+              </div>
               <div class="admin-notify-tools">
                 <span id="pending-badge" class="pending-badge hidden">0 nuevas</span>
                 <button id="notif-enable-btn" class="secondary" type="button">Activar avisos</button>
@@ -192,6 +211,7 @@
             </div>
             <div id="chat-section-body">
               <ul id="messages" class="messages" aria-live="polite"></ul>
+              <button id="chat-jump-btn" class="secondary chat-jump hidden" type="button">Ir al final</button>
               <form id="composer" class="composer">
                 <div id="emoji-bar" class="emoji-bar hidden" aria-label="Emojis frecuentes"></div>
                 <div id="draw-panel" class="draw-panel hidden" aria-label="Panel de dibujo">
@@ -220,15 +240,43 @@
         <section id="section-profile" class="hidden">
           <section id="profile-panel" class="card-soft">
             <div class="admin-panel-head">
-              <h3 id="profile-title">Tu perfil</h3>
+              <div>
+                <h3 id="profile-title">Tu perfil</h3>
+                <p id="profile-subtitle" class="section-subtitle section-subtitle-compact">
+                  Ajusta tu nombre y la configuración básica de la familia.
+                </p>
+              </div>
             </div>
             <form id="profile-form" class="stack">
+              <div class="profile-facts">
+                <div class="profile-fact">
+                  <span id="profile-role-label">Rol</span>
+                  <strong id="profile-role-value">-</strong>
+                </div>
+                <div class="profile-fact">
+                  <span id="profile-email-label">Email</span>
+                  <strong id="profile-email-value">-</strong>
+                </div>
+              </div>
               <label>
                 <span id="profile-name-label">Nombre visible</span>
                 <input id="profile-name-input" type="text" maxlength="40" required />
               </label>
+              <label id="retention-hours-row" class="hidden">
+                <span id="retention-hours-label">Borrado automático (horas)</span>
+                <input id="retention-hours-input" type="number" min="1" max="8760" step="1" value="720" />
+              </label>
+              <div id="retention-presets" class="retention-presets hidden">
+                <button class="secondary retention-preset" type="button" data-retention-hours="24">24h</button>
+                <button class="secondary retention-preset" type="button" data-retention-hours="72">72h</button>
+                <button class="secondary retention-preset" type="button" data-retention-hours="168">7d</button>
+                <button class="secondary retention-preset" type="button" data-retention-hours="720">30d</button>
+              </div>
+              <p id="retention-hint" class="profile-hint hidden">
+                Los mensajes se eliminarán automáticamente tras el tiempo indicado.
+              </p>
               <div class="template-form-actions">
-                <button id="profile-save-btn" type="submit">Guardar nombre</button>
+                <button id="profile-save-btn" type="submit">Guardar configuración</button>
                 <button id="profile-cancel-btn" class="secondary" type="button">Cancelar</button>
               </div>
             </form>
@@ -236,7 +284,7 @@
         </section>
 
         <nav class="app-tabs mobile-tabs" aria-label="Secciones">
-          <button id="tab-bottom-quick" class="app-tab active" type="button" data-tab-target="quick">Rápidos</button>
+          <button id="tab-bottom-quick" class="app-tab active" type="button" data-tab-target="quick">CookieExpress</button>
           <button id="tab-bottom-chat" class="app-tab" type="button" data-tab-target="chat">Chat</button>
           <button id="tab-bottom-profile" class="app-tab" type="button" data-tab-target="profile">Perfil</button>
         </nav>
