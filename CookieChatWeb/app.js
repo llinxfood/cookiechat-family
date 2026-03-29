@@ -55,6 +55,14 @@ const pendingLogoutBtn = document.querySelector("#pending-logout-btn");
 const logoutBtn = document.querySelector("#logout-btn");
 const e2eeKeyBtn = document.querySelector("#e2ee-key-btn");
 const e2eeIndicatorEl = document.querySelector("#e2ee-indicator");
+const profileToggleBtnEl = document.querySelector("#profile-toggle-btn");
+const profilePanelEl = document.querySelector("#profile-panel");
+const profileFormEl = document.querySelector("#profile-form");
+const profileTitleEl = document.querySelector("#profile-title");
+const profileNameLabelEl = document.querySelector("#profile-name-label");
+const profileNameInputEl = document.querySelector("#profile-name-input");
+const profileSaveBtnEl = document.querySelector("#profile-save-btn");
+const profileCancelBtnEl = document.querySelector("#profile-cancel-btn");
 const messagesEl = document.querySelector("#messages");
 const composer = document.querySelector("#composer");
 const draftEl = document.querySelector("#draft");
@@ -86,6 +94,9 @@ const templateActiveInputEl = document.querySelector("#template-active-input");
 const templateSaveBtnEl = document.querySelector("#template-save-btn");
 const templateResetBtnEl = document.querySelector("#template-reset-btn");
 const templateAdminListEl = document.querySelector("#template-admin-list");
+const chatSectionTitleEl = document.querySelector("#chat-section-title");
+const chatCollapseBtnEl = document.querySelector("#chat-collapse-btn");
+const chatSectionBodyEl = document.querySelector("#chat-section-body");
 
 let currentUserRole = null;
 let currentUserId = null;
@@ -108,6 +119,7 @@ let unsubscribeTemplates = null;
 let templates = [];
 let selectedTemplateCategory = "morning";
 let hasSeededTemplates = false;
+let isChatCollapsed = true;
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 const E2EE_PREFIX = "e2ee:v1:";
 const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
@@ -351,11 +363,17 @@ function applyStaticTranslations() {
   if (chatTitle) chatTitle.textContent = t("chat.title");
   logoutBtn.textContent = t("chat.logout");
   e2eeKeyBtn.textContent = t("chat.e2eeBtn");
+  if (profileToggleBtnEl) profileToggleBtnEl.textContent = currentLang === "es" ? "Perfil" : "Profile";
+  if (profileTitleEl) profileTitleEl.textContent = currentLang === "es" ? "Tu perfil" : "Your profile";
+  if (profileNameLabelEl) profileNameLabelEl.textContent = currentLang === "es" ? "Nombre visible" : "Visible name";
+  if (profileSaveBtnEl) profileSaveBtnEl.textContent = currentLang === "es" ? "Guardar nombre" : "Save name";
+  if (profileCancelBtnEl) profileCancelBtnEl.textContent = currentLang === "es" ? "Cancelar" : "Cancel";
   notifEnableBtn.textContent = t("chat.notify");
   draftEl.placeholder = t("chat.draft");
   if (composer.querySelector('button[type="submit"]')) composer.querySelector('button[type="submit"]').textContent = t("chat.send");
-  if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Mensajes rápidos" : "Quick messages";
-  if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Envía un mensaje cariñoso en dos toques." : "Send a caring message in two taps.";
+  if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Saludos rápidos" : "Quick greetings";
+  if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Saluda en 1-2 toques y vuelve a tu día." : "Greet in 1-2 taps and get back to your day.";
+  if (chatSectionTitleEl) chatSectionTitleEl.textContent = currentLang === "es" ? "Conversación familiar" : "Family chat";
   if (templateAdminTitleEl) templateAdminTitleEl.textContent = currentLang === "es" ? "Gestionar plantillas" : "Manage templates";
   if (templateAdminToggleBtnEl) templateAdminToggleBtnEl.textContent = currentLang === "es" ? "+ Plantilla" : "+ Template";
   if (templateSaveBtnEl) templateSaveBtnEl.textContent = currentLang === "es" ? "Guardar plantilla" : "Save template";
@@ -394,6 +412,19 @@ function setLanguage(lang) {
   renderQuickTemplateButtons();
   if (currentUserIsAdmin) {
     renderTemplateAdminList();
+  }
+  setChatCollapsed(isChatCollapsed);
+}
+
+function setChatCollapsed(collapsed) {
+  isChatCollapsed = collapsed;
+  if (chatSectionBodyEl) {
+    chatSectionBodyEl.classList.toggle("hidden", collapsed);
+  }
+  if (chatCollapseBtnEl) {
+    chatCollapseBtnEl.textContent = collapsed
+      ? (currentLang === "es" ? "Abrir chat" : "Open chat")
+      : (currentLang === "es" ? "Cerrar chat" : "Close chat");
   }
 }
 
@@ -1059,7 +1090,19 @@ async function loadMembership(user) {
     throw new Error(currentLang === "es" ? "Esta cuenta no esta aprobada en este grupo." : "This account is not approved in this family.");
   }
 
-  let resolvedName = (storedName && String(storedName).trim()) || "";
+  let resolvedName = "";
+  const userProfileRef = doc(db, "families", familyId, "userProfiles", user.uid);
+  const userProfileSnap = await getDoc(userProfileRef).catch(() => null);
+  if (userProfileSnap?.exists()) {
+    const profileName = String(userProfileSnap.data()?.displayName || "").trim();
+    if (profileName) {
+      resolvedName = profileName;
+    }
+  }
+
+  if (!resolvedName) {
+    resolvedName = (storedName && String(storedName).trim()) || "";
+  }
   if (!resolvedName) {
     const ownRequestRef = doc(db, "families", familyId, "joinRequests", user.uid);
     const ownRequestSnap = await getDoc(ownRequestRef);
@@ -1070,6 +1113,41 @@ async function loadMembership(user) {
   currentUserRole = role;
   currentUserName = resolvedName || inferDisplayName(user);
   currentUserIsAdmin = isAdmin || role === "admin";
+}
+
+async function saveOwnProfileName() {
+  if (!auth.currentUser || !currentUserId) return;
+  const nextName = String(profileNameInputEl?.value || "").trim();
+  if (nextName.length < 2) {
+    setStatus(currentLang === "es" ? "El nombre debe tener al menos 2 caracteres." : "Name must have at least 2 characters.", true);
+    return;
+  }
+
+  try {
+    await setDoc(
+      doc(db, "families", familyId, "userProfiles", currentUserId),
+      {
+        displayName: nextName,
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+    await updateProfile(auth.currentUser, { displayName: nextName }).catch(() => {});
+    if (currentUserIsAdmin) {
+      await setDoc(
+        doc(db, "families", familyId),
+        {
+          memberNames: { [currentUserId]: nextName }
+        },
+        { merge: true }
+      ).catch(() => {});
+    }
+    currentUserName = nextName;
+    profilePanelEl.classList.add("hidden");
+    setStatus(currentLang === "es" ? "Nombre actualizado." : "Name updated.");
+  } catch (error) {
+    setStatus(currentLang === "es" ? `No se pudo actualizar el nombre: ${error.message}` : `Could not update name: ${error.message}`, true);
+  }
 }
 
 async function loadOwnJoinRequest(userId) {
@@ -1317,6 +1395,34 @@ emojiToggleBtn.addEventListener("click", () => {
   emojiBarEl.classList.toggle("hidden");
   draftEl.focus();
 });
+if (chatCollapseBtnEl) {
+  chatCollapseBtnEl.addEventListener("click", () => {
+    setChatCollapsed(!isChatCollapsed);
+  });
+}
+if (profileToggleBtnEl) {
+  profileToggleBtnEl.addEventListener("click", () => {
+    if (!profilePanelEl) return;
+    const shouldShow = profilePanelEl.classList.contains("hidden");
+    if (shouldShow && profileNameInputEl) {
+      profileNameInputEl.value = currentUserName || "";
+      profileNameInputEl.focus();
+      profileNameInputEl.select();
+    }
+    profilePanelEl.classList.toggle("hidden", !shouldShow);
+  });
+}
+if (profileCancelBtnEl) {
+  profileCancelBtnEl.addEventListener("click", () => {
+    profilePanelEl.classList.add("hidden");
+  });
+}
+if (profileFormEl) {
+  profileFormEl.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await saveOwnProfileName();
+  });
+}
 installBtnEl.addEventListener("click", async () => {
   if (!installPromptEvent) {
     if (isIOS()) {
@@ -1445,10 +1551,13 @@ onAuthStateChanged(auth, async (user) => {
     lastPendingCount = null;
     templates = [];
     hasSeededTemplates = false;
+    isChatCollapsed = true;
     refreshE2EEIndicator();
+    setChatCollapsed(true);
     adminPanel.classList.add("hidden");
     templateAdminToggleBtnEl.classList.add("hidden");
     templateAdminPanelEl.classList.add("hidden");
+    if (profilePanelEl) profilePanelEl.classList.add("hidden");
     setView("auth");
     setStatus("");
     verifyEmailBtn.classList.add("hidden");
@@ -1461,6 +1570,9 @@ onAuthStateChanged(auth, async (user) => {
   try {
     setStatus(currentLang === "es" ? "Validando acceso..." : "Validating access...");
     await loadMembership(user);
+    if (profileNameInputEl) {
+      profileNameInputEl.value = currentUserName || "";
+    }
     if (!user.emailVerified) {
       verifyEmailBtn.classList.remove("hidden");
       pendingMessageEl.textContent =
@@ -1475,6 +1587,7 @@ onAuthStateChanged(auth, async (user) => {
 
     verifyEmailBtn.classList.add("hidden");
     setView("chat");
+    setChatCollapsed(true);
     setStatus(currentLang === "es" ? "Conectada." : "Connected.");
     watchMessages();
     watchTemplates();

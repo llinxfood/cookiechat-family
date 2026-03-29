@@ -103,6 +103,17 @@ service cloud.firestore {
           && request.resource.data.createdBy is string;
         allow delete: if isFamilyAdmin(familyId);
       }
+
+      match /userProfiles/{userId} {
+        allow read: if isFamilyMember(familyId) && (request.auth.uid == userId || isFamilyAdmin(familyId));
+        allow create, update: if isFamilyMember(familyId)
+          && request.auth.uid == userId
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() > 1
+          && request.resource.data.displayName.size() <= 40
+          && (request.resource.data.updatedAt is timestamp || request.resource.data.updatedAt == request.time);
+        allow delete: if false;
+      }
     }
   }
 }

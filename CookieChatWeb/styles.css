@@ -490,6 +490,19 @@ button.secondary {
   font-weight: 600;
 }
 
+.chat-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chat-section-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .template-form-grid {
   display: grid;
   gap: 10px;

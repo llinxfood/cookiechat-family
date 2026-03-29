@@ -115,10 +115,26 @@
           <h2>Chat</h2>
           <div class="chat-actions">
             <span id="e2ee-indicator" class="e2ee-indicator">E2EE desactivado</span>
+            <button id="profile-toggle-btn" class="secondary" type="button">Perfil</button>
             <button id="e2ee-key-btn" class="secondary" type="button">Clave E2EE</button>
             <button id="logout-btn" class="secondary" type="button">Salir</button>
           </div>
         </div>
+        <section id="profile-panel" class="card-soft hidden">
+          <div class="admin-panel-head">
+            <h3 id="profile-title">Tu perfil</h3>
+          </div>
+          <form id="profile-form" class="stack">
+            <label>
+              <span id="profile-name-label">Nombre visible</span>
+              <input id="profile-name-input" type="text" maxlength="40" required />
+            </label>
+            <div class="template-form-actions">
+              <button id="profile-save-btn" type="submit">Guardar nombre</button>
+              <button id="profile-cancel-btn" class="secondary" type="button">Cancelar</button>
+            </div>
+          </form>
+        </section>
         <section id="admin-panel" class="admin-panel hidden">
           <div class="admin-panel-head">
             <h3>Solicitudes de acceso</h3>
@@ -132,8 +148,8 @@
         <section id="quick-templates-card" class="quick-templates card-soft">
           <div class="quick-templates-head">
             <div>
-              <h3 id="quick-templates-title">Mensajes rápidos</h3>
-              <p id="quick-templates-subtitle">Envía un mensaje cariñoso en dos toques.</p>
+              <h3 id="quick-templates-title">Saludos rápidos</h3>
+              <p id="quick-templates-subtitle">Saluda en 1-2 toques y vuelve a tu día.</p>
             </div>
             <button id="template-admin-toggle-btn" class="secondary hidden" type="button">+ Plantilla</button>
           </div>
@@ -175,17 +191,25 @@
           </form>
           <ul id="template-admin-list" class="requests"></ul>
         </section>
-        <ul id="messages" class="messages" aria-live="polite"></ul>
-        <form id="composer" class="composer">
-          <div id="emoji-bar" class="emoji-bar hidden" aria-label="Emojis frecuentes"></div>
-          <div class="composer-row">
-            <button id="emoji-toggle" class="emoji-toggle secondary" type="button" aria-label="Mostrar emojis">
-              😊
-            </button>
-            <input id="draft" type="text" maxlength="1000" placeholder="Escribe un mensaje..." required />
-            <button type="submit">Enviar</button>
+        <section id="chat-section-card" class="card-soft">
+          <div class="chat-section-head">
+            <h3 id="chat-section-title">Conversación familiar</h3>
+            <button id="chat-collapse-btn" class="secondary" type="button">Abrir chat</button>
           </div>
-        </form>
+          <div id="chat-section-body" class="hidden">
+            <ul id="messages" class="messages" aria-live="polite"></ul>
+            <form id="composer" class="composer">
+              <div id="emoji-bar" class="emoji-bar hidden" aria-label="Emojis frecuentes"></div>
+              <div class="composer-row">
+                <button id="emoji-toggle" class="emoji-toggle secondary" type="button" aria-label="Mostrar emojis">
+                  😊
+                </button>
+                <input id="draft" type="text" maxlength="1000" placeholder="Escribe un mensaje..." required />
+                <button type="submit">Enviar</button>
+              </div>
+            </form>
+          </div>
+        </section>
       </section>
     </main>
 
