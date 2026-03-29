@@ -392,6 +392,32 @@ button.secondary {
   margin-bottom: 8px;
 }
 
+.app-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+
+.app-tab {
+  flex: 1;
+  border: 1px solid rgba(35, 88, 166, 0.2);
+  border-radius: 12px;
+  background: rgba(233, 238, 249, 0.95);
+  color: #26426d;
+  padding: 9px 10px;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.app-tab.active {
+  background: linear-gradient(180deg, #2f84ff 0%, var(--accent) 80%);
+  color: #fff;
+}
+
+.mobile-tabs {
+  display: none;
+}
+
 .chat-actions {
   display: flex;
   align-items: center;
@@ -823,6 +849,21 @@ button.secondary {
   .chat-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .desktop-tabs {
+    display: none;
+  }
+
+  .mobile-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    position: sticky;
+    bottom: 0;
+    background: rgba(237, 243, 255, 0.95);
+    padding-top: 8px;
+    border-top: 1px solid rgba(35, 88, 166, 0.18);
+    z-index: 10;
   }
 
   .template-form-grid,

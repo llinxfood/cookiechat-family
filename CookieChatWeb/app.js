@@ -97,6 +97,10 @@ const templateAdminListEl = document.querySelector("#template-admin-list");
 const chatSectionTitleEl = document.querySelector("#chat-section-title");
 const chatCollapseBtnEl = document.querySelector("#chat-collapse-btn");
 const chatSectionBodyEl = document.querySelector("#chat-section-body");
+const sectionQuickEl = document.querySelector("#section-quick");
+const sectionChatEl = document.querySelector("#section-chat");
+const sectionProfileEl = document.querySelector("#section-profile");
+const tabButtons = document.querySelectorAll("[data-tab-target]");
 
 let currentUserRole = null;
 let currentUserId = null;
@@ -120,6 +124,7 @@ let templates = [];
 let selectedTemplateCategory = "morning";
 let hasSeededTemplates = false;
 let isChatCollapsed = false;
+let currentLoggedInTab = "quick";
 const frequentEmojis = ["😀", "😂", "😍", "🥰", "🙏", "👍", "❤️", "🎉", "😢", "😘", "😎", "🍪"];
 const E2EE_PREFIX = "e2ee:v1:";
 const E2EE_SALT_PREFIX = "cookiechat-e2ee-v1";
@@ -390,6 +395,18 @@ function applyStaticTranslations() {
   if (quickTemplatesTitleEl) quickTemplatesTitleEl.textContent = currentLang === "es" ? "Saludos rápidos" : "Quick greetings";
   if (quickTemplatesSubtitleEl) quickTemplatesSubtitleEl.textContent = currentLang === "es" ? "Saluda en 1-2 toques y vuelve a tu día." : "Greet in 1-2 taps and get back to your day.";
   if (chatSectionTitleEl) chatSectionTitleEl.textContent = currentLang === "es" ? "Conversación familiar" : "Family chat";
+  const tabQuickTop = document.querySelector("#tab-top-quick");
+  const tabChatTop = document.querySelector("#tab-top-chat");
+  const tabProfileTop = document.querySelector("#tab-top-profile");
+  const tabQuickBottom = document.querySelector("#tab-bottom-quick");
+  const tabChatBottom = document.querySelector("#tab-bottom-chat");
+  const tabProfileBottom = document.querySelector("#tab-bottom-profile");
+  if (tabQuickTop) tabQuickTop.textContent = currentLang === "es" ? "Rápidos" : "Quick";
+  if (tabChatTop) tabChatTop.textContent = currentLang === "es" ? "Chat" : "Chat";
+  if (tabProfileTop) tabProfileTop.textContent = currentLang === "es" ? "Perfil" : "Profile";
+  if (tabQuickBottom) tabQuickBottom.textContent = currentLang === "es" ? "Rápidos" : "Quick";
+  if (tabChatBottom) tabChatBottom.textContent = currentLang === "es" ? "Chat" : "Chat";
+  if (tabProfileBottom) tabProfileBottom.textContent = currentLang === "es" ? "Perfil" : "Profile";
   if (templateAdminTitleEl) templateAdminTitleEl.textContent = currentLang === "es" ? "Gestionar plantillas" : "Manage templates";
   if (templateAdminToggleBtnEl) templateAdminToggleBtnEl.textContent = currentLang === "es" ? "+ Plantilla" : "+ Template";
   if (templateSaveBtnEl) templateSaveBtnEl.textContent = currentLang === "es" ? "Guardar plantilla" : "Save template";
@@ -430,6 +447,7 @@ function setLanguage(lang) {
     renderTemplateAdminList();
   }
   setChatCollapsed(isChatCollapsed);
+  setLoggedInTab(currentLoggedInTab);
 }
 
 function setChatCollapsed(collapsed) {
@@ -441,6 +459,25 @@ function setChatCollapsed(collapsed) {
     chatCollapseBtnEl.textContent = collapsed
       ? (currentLang === "es" ? "Abrir chat" : "Open chat")
       : (currentLang === "es" ? "Cerrar chat" : "Close chat");
+  }
+}
+
+function setLoggedInTab(tab) {
+  currentLoggedInTab = ["quick", "chat", "profile"].includes(tab) ? tab : "quick";
+
+  if (sectionQuickEl) sectionQuickEl.classList.toggle("hidden", currentLoggedInTab !== "quick");
+  if (sectionChatEl) sectionChatEl.classList.toggle("hidden", currentLoggedInTab !== "chat");
+  if (sectionProfileEl) sectionProfileEl.classList.toggle("hidden", currentLoggedInTab !== "profile");
+
+  if (tabButtons?.length) {
+    tabButtons.forEach((btn) => {
+      const isActive = btn.dataset.tabTarget === currentLoggedInTab;
+      btn.classList.toggle("active", isActive);
+    });
+  }
+
+  if (currentLoggedInTab === "profile" && profileNameInputEl) {
+    profileNameInputEl.value = currentUserName || "";
   }
 }
 
@@ -1188,7 +1225,7 @@ async function saveOwnProfileName() {
       ).catch(() => {});
     }
     currentUserName = nextName;
-    profilePanelEl.classList.add("hidden");
+    setLoggedInTab("profile");
     setStatus(currentLang === "es" ? "Nombre actualizado." : "Name updated.");
   } catch (error) {
     setStatus(currentLang === "es" ? `No se pudo actualizar el nombre: ${error.message}` : `Could not update name: ${error.message}`, true);
@@ -1447,19 +1484,16 @@ if (chatCollapseBtnEl) {
 }
 if (profileToggleBtnEl) {
   profileToggleBtnEl.addEventListener("click", () => {
-    if (!profilePanelEl) return;
-    const shouldShow = profilePanelEl.classList.contains("hidden");
-    if (shouldShow && profileNameInputEl) {
-      profileNameInputEl.value = currentUserName || "";
+    setLoggedInTab("profile");
+    if (profileNameInputEl) {
       profileNameInputEl.focus();
       profileNameInputEl.select();
     }
-    profilePanelEl.classList.toggle("hidden", !shouldShow);
   });
 }
 if (profileCancelBtnEl) {
   profileCancelBtnEl.addEventListener("click", () => {
-    profilePanelEl.classList.add("hidden");
+    setLoggedInTab("quick");
   });
 }
 if (profileFormEl) {
@@ -1564,6 +1598,13 @@ if (templateResetBtnEl) {
     resetTemplateForm();
   });
 }
+if (tabButtons?.length) {
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setLoggedInTab(btn.dataset.tabTarget || "quick");
+    });
+  });
+}
 if (templateAdminToggleBtnEl) {
   templateAdminToggleBtnEl.addEventListener("click", () => {
     templateAdminPanelEl.classList.toggle("hidden");
@@ -1602,7 +1643,7 @@ onAuthStateChanged(auth, async (user) => {
     adminPanel.classList.add("hidden");
     templateAdminToggleBtnEl.classList.add("hidden");
     templateAdminPanelEl.classList.add("hidden");
-    if (profilePanelEl) profilePanelEl.classList.add("hidden");
+    setLoggedInTab("quick");
     setView("auth");
     setStatus("");
     verifyEmailBtn.classList.add("hidden");
@@ -1633,6 +1674,7 @@ onAuthStateChanged(auth, async (user) => {
     verifyEmailBtn.classList.add("hidden");
     setView("chat");
     setChatCollapsed(false);
+    setLoggedInTab("quick");
     setStatus(currentLang === "es" ? "Conectada." : "Connected.");
     watchMessages();
     watchTemplates();
